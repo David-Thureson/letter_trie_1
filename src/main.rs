@@ -157,16 +157,9 @@ fn try_one_combination(dataset: &Dataset, load_method: &LoadMethod, letter_trie_
         LetterTrieType::Base => {
             BaseLetterTrie::from_file_test(filename, is_sorted, &load_method, &opt);
         }
-        /*
 		LetterTrieType::NoParent => {
             if is_sorted || *load_method != LoadMethod::ContinuousParallel {
                 NoParentLetterTrie::from_file_test(filename, is_sorted, &load_method, &opt);
-            }
-        }
-		*/
-        LetterTrieType::MinStruct => {
-            if is_sorted || *load_method != LoadMethod::ContinuousParallel {
-                MinStructLetterTrie::from_file_test(filename, is_sorted, &load_method, &opt);
             }
         }
     };

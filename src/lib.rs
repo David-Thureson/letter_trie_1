@@ -34,18 +34,17 @@ pub mod base_letter_trie;
 pub use base_letter_trie::BaseLetterTrie;
 pub mod no_parent_letter_trie;
 pub use no_parent_letter_trie::NoParentLetterTrie;
-pub mod min_struct_letter_trie;
-pub use min_struct_letter_trie::MinStructLetterTrie;
+// pub mod min_struct_letter_trie;
+// pub use min_struct_letter_trie::MinStructLetterTrie;
 
-const DATA_PATH: &str = "C:\\Data\\Text\\";
-const FILENAME_SMALL_SORTED: &str = "C:\\Data\\Text\\words_9_sorted.txt";
-const FILENAME_SMALL_UNSORTED: &str = "C:\\Data\\Text\\words_9_unsorted.txt";
-const FILENAME_MEDIUM_SORTED: &str = "C:\\Data\\Text\\words_10_000_sorted.txt";
-const FILENAME_MEDIUM_UNSORTED: &str = "C:\\Data\\Text\\words_10_000_unsorted.txt";
-const FILENAME_LARGE_SORTED: &str = "C:\\Data\\Text\\words_584_983_sorted.txt";
-const FILENAME_LARGE_UNSORTED: &str = "C:\\Data\\Text\\words_584_983_unsorted.txt";
-const FILENAME_GOOD_WORDS: &str = "C:\\Data\\Text\\test_good_words.txt";
-const FILENAME_NON_WORDS: &str = "C:\\Data\\Text\\test_non_words.txt";
+const FILENAME_SMALL_SORTED: &str = "words_9_sorted.txt";
+const FILENAME_SMALL_UNSORTED: &str = "words_9_unsorted.txt";
+const FILENAME_MEDIUM_SORTED: &str = "words_10_000_sorted.txt";
+const FILENAME_MEDIUM_UNSORTED: &str = "words_10_000_unsorted.txt";
+const FILENAME_LARGE_SORTED: &str = "words_584_983_sorted.txt";
+const FILENAME_LARGE_UNSORTED: &str = "words_584_983_unsorted.txt";
+const FILENAME_GOOD_WORDS: &str = "test_good_words.txt";
+const FILENAME_NON_WORDS: &str = "test_non_words.txt";
 const USE_CHAR_GET_COUNTER: bool = false;
 
 // const DEBUG_TREE_MAX_DEPTH: usize = 3;
@@ -63,17 +62,22 @@ const LABEL_FREEZE: &str = "freeze";
 const LABEL_UNFREEZE: &str = "unfreeze";
 const LABEL_PRINT_ROOT: &str = "print root";
 
-/// Enum used to choose the number of words to load in the character trie.
+/// Enum used to choose the collection of words to load in the letter trie. Whether the words are sorted in the
+/// collection may affect the speed of loading the trie depending on the chosen LoadMethod but the resulting trie
+/// will be identical either way.
 #[derive(Debug)]
 pub enum Dataset {
-    /// Small file with nine words.
+    /// Small file with nine sorted English words.
     TestSmallSorted,
+    /// Small file with nine unsorted English words.
     TestSmallUnsorted,
-    /// Medium file with 10,000 words.
+    /// Medium file with 10,000 sorted non-English words.
     TestMediumSorted,
+    /// Medium file with 10,000 unsorted non-English words.
     TestMediumUnsorted,
-    /// Large file with 584, 983 words.
+    /// Large file with 584,983 sorted non-English words.
     TestLargeSorted,
+    /// Large file with 584,983 unsorted non-English words.
     TestLargeUnsorted,
 }
 
@@ -106,6 +110,7 @@ impl Dataset {
     ///
     /// ```
     /// let is_sorted = letter_trie::Dataset::TestLargeUnsorted.is_sorted();
+	/// assert_eq!(false, is_sorted);
     /// ```
     pub fn is_sorted(&self) -> bool {
         match self {
@@ -117,35 +122,43 @@ impl Dataset {
     }
 }
 
+/// Enum used to choose between different implementations of LetterTrie.
 #[derive(Debug)]
 pub enum LetterTrieType {
+	/// The baseline implementation using Rc<RefCell<Node>> for child links and Weak<RefCell<Node>> for parent links.
     Base,
-    // NoParent,
-    MinStruct,
+	/// A stripped-down implementation with no parent links and with direct ownership of child nodes.
+    NoParent,
 }
 
 /// The method the LetterTrie will use to load words from a text file.
 #[derive(Debug, PartialEq)]
 pub enum LoadMethod {
+	/// Read the whole file into memory, create a vector of words, then fill the trie.
     ReadVecFill,
+	/// Read the file into a vector in one step, then fill the tree.
     VecFill,
+	/// Build the tree while reading lines from the file.
     Continuous,
+	/// Read lines from the file, and as soon as all of the words for each starting letter have been read spawn affect
+	/// thread to build a trie for that starting letter while continuing to read from the file in the first thread.
+	/// As each thread finishes building its trie, merge that trie into the main trie.
     ContinuousParallel,
 }
 
-impl LoadMethod {
-    pub fn requires_merge(&self) -> bool {
-        match self {
-            LoadMethod::ContinuousParallel => true,
-            _ => false,
-        }
-    }
-}
-
+/// Options for the amount of detail to display while building a trie.
 pub struct DisplayDetailOptions {
+	/// If true, print the elapsed time for the whole trie build including reading the file.
     pub print_overall_time: bool,
+	/// If true, print the elapsed time for each step. The particular steps depend on the chosen LoadMethod.
     pub print_step_time: bool,
+	/// The amount of debugging information to print about the trie after it's been built:
+	/// - 0: Print nothing
+	/// - 1: Print a single line for the trie, the equivalent of `println!("{:?}", trie.to_fixed_node());`.
+	/// - 2: Print a multiple lines for the trie, the equivalent of `println!("{:#?}", trie.to_fixed_node());`.
     pub object_detail_level: usize,
+	/// The label to be displayed with any debugging information. One easy way to create this string is with a
+	/// call to `get_test_label()`.
     pub label: String,
 }
 
@@ -209,7 +222,13 @@ pub struct FixedNode {
     height: usize,
 }
 
+/// A [letter trie](https://www.geeksforgeeks.org/trie-insert-and-search/) with implementations that use different
+/// approaches for parent and child links but otherwise work the same.
 pub trait LetterTrie {
+
+	/// Create a trie from a text file containing one word per line. The words may be upper- or lowercase and
+	/// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
+	/// ignored.
     fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self;
 
     fn from_file_test(

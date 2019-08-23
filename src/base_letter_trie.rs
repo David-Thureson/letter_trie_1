@@ -39,6 +39,11 @@ pub struct BaseLetterTrie {
 impl BaseLetterTrie {
 	/// Constructor for the letter trie. The root of each trie is the same regardless of what words will be added to
 	/// the trie so there are no parameters.
+	///
+	/// #Examples
+	/// ```
+	/// let mut trie = letter_trie::BaseLetterTrie::new();
+	/// ```
     pub fn new() -> BaseLetterTrie {
         let c = ' ';
         let depth = 0;
