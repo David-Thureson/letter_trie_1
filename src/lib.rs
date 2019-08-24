@@ -1,14 +1,8 @@
 // Enables the use of Weak::strong_count() and Weak::weak_count().
 #![feature(weak_counts)]
-
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(unused_assignments)]
-
+#![allow(clippy::new_without_default)]
 #![feature(test)]
 extern crate test;
-
 
 extern crate util;
 use util::*;
@@ -16,18 +10,11 @@ use util::*;
 #[macro_use]
 extern crate lazy_static;
 
-use std::cell::RefCell;
-use std::cmp;
-use std::collections::{BTreeMap, HashSet};
-use std::fmt::{self, Debug};
-use std::fs;
+use std::collections::HashSet;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc;
-use std::rc::Rc;
-use std::sync::mpsc;
 use std::sync::Mutex;
-use std::thread;
 use std::time::Instant;
 
 pub mod base_letter_trie;
@@ -58,9 +45,6 @@ const LABEL_STEP_MAKE_VECTOR: &str = "make_vector";
 const LABEL_STEP_SORT_VECTOR: &str = "sort_vector";
 const LABEL_STEP_READ_AND_VECTOR: &str = "make vector from file";
 const LABEL_STEP_LOAD_FROM_VEC: &str = "load from vector";
-const LABEL_FREEZE: &str = "freeze";
-const LABEL_UNFREEZE: &str = "unfreeze";
-const LABEL_PRINT_ROOT: &str = "print root";
 
 /// Enum used to choose the collection of words to load in the letter trie. Whether the words are sorted in the
 /// collection may affect the speed of loading the trie depending on the chosen LoadMethod but the resulting trie
@@ -110,7 +94,7 @@ impl Dataset {
     ///
     /// ```
     /// let is_sorted = letter_trie::Dataset::TestLargeUnsorted.is_sorted();
-	/// assert_eq!(false, is_sorted);
+    /// assert_eq!(false, is_sorted);
     /// ```
     pub fn is_sorted(&self) -> bool {
         match self {
@@ -125,40 +109,40 @@ impl Dataset {
 /// Enum used to choose between different implementations of LetterTrie.
 #[derive(Debug)]
 pub enum LetterTrieType {
-	/// The baseline implementation using Rc<RefCell<Node>> for child links and Weak<RefCell<Node>> for parent links.
+    /// The baseline implementation using Rc<RefCell<Node>> for child links and Weak<RefCell<Node>> for parent links.
     Base,
-	/// A stripped-down implementation with no parent links and with direct ownership of child nodes.
+    /// A stripped-down implementation with no parent links and with direct ownership of child nodes.
     NoParent,
 }
 
 /// The method the LetterTrie will use to load words from a text file.
 #[derive(Debug, PartialEq)]
 pub enum LoadMethod {
-	/// Read the whole file into memory, create a vector of words, then fill the trie.
+    /// Read the whole file into memory, create a vector of words, then fill the trie.
     ReadVecFill,
-	/// Read the file into a vector in one step, then fill the tree.
+    /// Read the file into a vector in one step, then fill the tree.
     VecFill,
-	/// Build the tree while reading lines from the file.
+    /// Build the tree while reading lines from the file.
     Continuous,
-	/// Read lines from the file, and as soon as all of the words for each starting letter have been read spawn affect
-	/// thread to build a trie for that starting letter while continuing to read from the file in the first thread.
-	/// As each thread finishes building its trie, merge that trie into the main trie.
+    /// Read lines from the file, and as soon as all of the words for each starting letter have been read spawn affect
+    /// thread to build a trie for that starting letter while continuing to read from the file in the first thread.
+    /// As each thread finishes building its trie, merge that trie into the main trie.
     ContinuousParallel,
 }
 
 /// Options for the amount of detail to display while building a trie.
 pub struct DisplayDetailOptions {
-	/// If true, print the elapsed time for the whole trie build including reading the file.
+    /// If true, print the elapsed time for the whole trie build including reading the file.
     pub print_overall_time: bool,
-	/// If true, print the elapsed time for each step. The particular steps depend on the chosen LoadMethod.
+    /// If true, print the elapsed time for each step. The particular steps depend on the chosen LoadMethod.
     pub print_step_time: bool,
-	/// The amount of debugging information to print about the trie after it's been built:
-	/// - 0: Print nothing
-	/// - 1: Print a single line for the trie, the equivalent of `println!("{:?}", trie.to_fixed_node());`.
-	/// - 2: Print a multiple lines for the trie, the equivalent of `println!("{:#?}", trie.to_fixed_node());`.
+    /// The amount of debugging information to print about the trie after it's been built:
+    /// - 0: Print nothing
+    /// - 1: Print a single line for the trie, the equivalent of `println!("{:?}", trie.to_fixed_node());`.
+    /// - 2: Print a multiple lines for the trie, the equivalent of `println!("{:#?}", trie.to_fixed_node());`.
     pub object_detail_level: usize,
-	/// The label to be displayed with any debugging information. One easy way to create this string is with a
-	/// call to `get_test_label()`.
+    /// The label to be displayed with any debugging information. One easy way to create this string is with a
+    /// call to `get_test_label()`.
     pub label: String,
 }
 
@@ -225,10 +209,9 @@ pub struct FixedNode {
 /// A [letter trie](https://www.geeksforgeeks.org/trie-insert-and-search/) with implementations that use different
 /// approaches for parent and child links but otherwise work the same.
 pub trait LetterTrie {
-
-	/// Create a trie from a text file containing one word per line. The words may be upper- or lowercase and
-	/// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
-	/// ignored.
+    /// Create a trie from a text file containing one word per line. The words may be upper- or lowercase and
+    /// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
+    /// ignored.
     fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self;
 
     fn from_file_test(
@@ -241,15 +224,14 @@ pub trait LetterTrie {
     fn find(&self, prefix: &str) -> Option<FixedNode>;
 
     fn to_fixed_node(&self) -> FixedNode;
-	
-	fn print_root(&self) {
-		println!("{:?}", self.to_fixed_node());
-	}
 
-	fn print_root_alt(&self) {
-		println!("{:#?}", self.to_fixed_node());
-	}
-		
+    fn print_root(&self) {
+        println!("{:?}", self.to_fixed_node());
+    }
+
+    fn print_root_alt(&self) {
+        println!("{:#?}", self.to_fixed_node());
+    }
 }
 
 lazy_static! {
@@ -339,31 +321,30 @@ fn make_vec_char(filename: &str, opt: &DisplayDetailOptions) -> Vec<Vec<char>> {
 }
 
 pub fn words_from_file(filename: &str) -> Vec<String> {
-	let file = File::open(filename).unwrap();
-	let mut v: Vec<String> = vec![];
-	for line in BufReader::new(file).lines() {
-		let line = line.unwrap();
-		let line = line.trim();
-		if line.len() > 0 {
-			v.push(line.to_string());
-		}
-	}
-	v		
+    let file = File::open(filename).unwrap();
+    let mut v: Vec<String> = vec![];
+    for line in BufReader::new(file).lines() {
+        let line = line.unwrap();
+        let line = line.trim();
+        if !line.is_empty() {
+            v.push(line.to_string());
+        }
+    }
+    v
 }
 
 pub fn good_words() -> Vec<String> {
-	words_from_file(FILENAME_GOOD_WORDS)
+    words_from_file(FILENAME_GOOD_WORDS)
 }
 
 pub fn non_words() -> Vec<String> {
-	words_from_file(FILENAME_NON_WORDS)
+    words_from_file(FILENAME_NON_WORDS)
 }
 
 pub fn large_dataset_words_hash_set() -> HashSet<String> {
-	let mut hash_set = HashSet::new();
-	for word in words_from_file(Dataset::TestLargeSorted.filename()) {
-		hash_set.insert(word);
-	}
-	hash_set
+    let mut hash_set = HashSet::new();
+    for word in words_from_file(Dataset::TestLargeSorted.filename()) {
+        hash_set.insert(word);
+    }
+    hash_set
 }
-

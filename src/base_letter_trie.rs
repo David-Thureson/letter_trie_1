@@ -4,7 +4,6 @@ extern crate test;
 extern crate util;
 use util::*;
 
-use std::cell::Ref;
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::BTreeMap;
@@ -12,12 +11,10 @@ use std::fmt::{self, Debug};
 use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc;
 use std::rc::{Rc, Weak};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
-use std::mem;
 
 use crate::*;
 
@@ -32,36 +29,36 @@ type ParentLink = Weak<RefCell<Node>>;
 /// references from nodes to their parents to experiment with Rc and RefCell. Other trees use different approaches
 /// for parent and child links but otherwise work the same.
 pub struct BaseLetterTrie {
-	// The root node's character is a single space which doesn't count toward the words represented by the trie.
+    // The root node's character is a single space which doesn't count toward the words represented by the trie.
     root: ChildLink,
 }
 
 impl BaseLetterTrie {
-	/// Constructor for the letter trie. The root of each trie is the same regardless of what words will be added to
-	/// the trie so there are no parameters.
-	///
-	/// #Examples
-	/// ```
-	/// let mut trie = letter_trie::BaseLetterTrie::new();
-	/// ```
+    /// Constructor for the letter trie. The root of each trie is the same regardless of what words will be added to
+    /// the trie so there are no parameters.
+    ///
+    /// #Examples
+    /// ```
+    /// let mut trie = letter_trie::BaseLetterTrie::new();
+    /// ```
     pub fn new() -> BaseLetterTrie {
         let c = ' ';
         let depth = 0;
         let parent = None;
         let is_word = false;
         let root = BaseLetterTrie::make_child_node_and_link(c, parent, depth, is_word);
-		debug_assert!(Self::child_link_has_normal_ref_counts(&root));
+        debug_assert!(Self::child_link_has_normal_ref_counts(&root));
         BaseLetterTrie { root }
     }
 
-	// Create an Rc<RefCell<Node>> for a given character.
+    // Create an Rc<RefCell<Node>> for a given character.
     fn make_child_node_and_link(
         c: char,
         parent: Option<ParentLink>,
         depth: usize,
         is_word: bool,
     ) -> ChildLink {
-		debug_assert!(Self::opt_parent_link_has_normal_ref_counts(&parent));		
+        debug_assert!(Self::opt_parent_link_has_normal_ref_counts(&parent));
         let children = BTreeMap::new();
         Rc::new(RefCell::new(Node {
             c,
@@ -88,8 +85,8 @@ impl BaseLetterTrie {
 
     // This is called once for every word, and should be called only on the root.
     pub fn add_from_vec_chars(&self, v: &[char], v_len: usize, char_index: usize) {
-		debug_assert!(!self.is_frozen());
-		debug_assert!(self.root.borrow().c == ' ');
+        debug_assert!(!self.is_frozen());
+        debug_assert!(self.root.borrow().c == ' ');
         if v_len > 0 {
             BaseLetterTrie::add_from_vec_chars_one_char(&self.root, v, v_len, char_index);
             // BaseLetterTrie::add_from_vec_chars_rc_loop(&self.root, v, v_len, char_index);
@@ -98,7 +95,7 @@ impl BaseLetterTrie {
 
     // This is called once for every character in every word.
     fn add_from_vec_chars_one_char(rc: &ChildLink, v: &[char], v_len: usize, char_index: usize) {
-		debug_assert!(Self::child_link_has_normal_ref_counts(&rc));
+        debug_assert!(Self::child_link_has_normal_ref_counts(&rc));
         if char_index < v_len {
             let c = v[char_index];
             let is_word = char_index == v_len - 1;
@@ -110,35 +107,57 @@ impl BaseLetterTrie {
             }
 
             if let Some(child_node_link) = child_node_opt {
-				debug_assert!(Self::child_link_has_normal_ref_counts(&child_node_link));
+                debug_assert!(Self::child_link_has_normal_ref_counts(&child_node_link));
                 if is_word {
                     let mut child_node = child_node_link.borrow_mut();
                     child_node.is_word = true;
                 }
-                BaseLetterTrie::add_from_vec_chars_one_char(&child_node_link, v, v_len, char_index + 1);
+                BaseLetterTrie::add_from_vec_chars_one_char(
+                    &child_node_link,
+                    v,
+                    v_len,
+                    char_index + 1,
+                );
             } else {
-				debug_assert!(Self::child_link_has_normal_ref_counts(&rc));
+                debug_assert!(Self::child_link_has_normal_ref_counts(&rc));
                 let parent: ParentLink = Rc::downgrade(&rc);
-				debug_assert!(Self::parent_link_has_normal_ref_counts(&parent));
-                let new_child_link: ChildLink =
-                    BaseLetterTrie::make_child_node_and_link(c, Some(parent), root.depth + 1, is_word);
-                BaseLetterTrie::add_from_vec_chars_one_char(&new_child_link, v, v_len, char_index + 1);
+                debug_assert!(Self::parent_link_has_normal_ref_counts(&parent));
+                let new_child_link: ChildLink = BaseLetterTrie::make_child_node_and_link(
+                    c,
+                    Some(parent),
+                    root.depth + 1,
+                    is_word,
+                );
+                BaseLetterTrie::add_from_vec_chars_one_char(
+                    &new_child_link,
+                    v,
+                    v_len,
+                    char_index + 1,
+                );
                 root.children.insert(c, new_child_link);
             }
         }
     }
-	
+
     pub fn merge(&self, other: BaseLetterTrie) {
         let mut this_node = self.root.borrow_mut();
         for other_child_node_link in other.root.borrow().children.values() {
-			debug_assert!(Self::child_link_has_normal_ref_counts(&other_child_node_link));
+            debug_assert!(Self::child_link_has_normal_ref_counts(
+                &other_child_node_link
+            ));
             let mut other_child_node = other_child_node_link.borrow_mut();
             let parent: ParentLink = Rc::downgrade(&self.root);
             other_child_node.parent = Some(parent);
-			debug_assert!(Self::opt_parent_link_has_normal_ref_counts(&other_child_node.parent));
+            debug_assert!(Self::opt_parent_link_has_normal_ref_counts(
+                &other_child_node.parent
+            ));
             let c = other_child_node.c;
-            this_node.children.insert(c, Rc::clone(other_child_node_link));
-			debug_assert!(Self::child_link_has_normal_ref_counts(&other_child_node_link));
+            this_node
+                .children
+                .insert(c, Rc::clone(other_child_node_link));
+            debug_assert!(Self::child_link_has_normal_ref_counts(
+                &other_child_node_link
+            ));
         }
     }
 
@@ -169,16 +188,16 @@ impl BaseLetterTrie {
         }
     }
 
-	pub fn iter_prefix(&self, prefix: &str) -> BaseLetterTrieIteratorPrefix {
+    pub fn iter_prefix(&self, prefix: &str) -> BaseLetterTrieIteratorPrefix {
         let prefix: Vec<char> = prefix.to_lowercase().chars().collect();
         let prefix_len = prefix.len();
-		BaseLetterTrieIteratorPrefix {
-			prefix,
-			prefix_len,
-			prefix_index: 0,
-			rc: Rc::clone(&self.root),
-		}
-	}
+        BaseLetterTrieIteratorPrefix {
+            prefix,
+            prefix_len,
+            prefix_index: 0,
+            rc: Rc::clone(&self.root),
+        }
+    }
 
     pub fn freeze(&mut self) {
         self.root.borrow_mut().freeze();
@@ -345,121 +364,118 @@ impl BaseLetterTrie {
         }
     }
 
-    fn find(&self, prefix: &str) -> Option<FixedNode> {
+    pub fn find(&self, prefix: &str) -> Option<FixedNode> {
         let prefix: Vec<char> = prefix.to_lowercase().chars().collect();
         let prefix_len = prefix.len();
         self.root.borrow().find_child(prefix, prefix_len, 0)
     }
 
-	pub fn find_loop(&self, prefix: &str) -> Option<FixedNode> {
+    pub fn find_loop(&self, prefix: &str) -> Option<FixedNode> {
         let prefix: Vec<char> = prefix.to_lowercase().chars().collect();
         let prefix_len = prefix.len();
-		let mut prefix_index = 0;
-		let mut rc = Rc::clone(&self.root);
-		loop {
-			if prefix_index > prefix_len {
-				return None;
-			} else {
-				if prefix_index == prefix_len {
-					return if rc.borrow().is_word {
-						Some(rc.borrow().to_fixed_node())
-					} else {
-						None
-					};
-				}
-				let c = prefix[prefix_index];
-				let rc_opt = rc.borrow().children.get(&c).map(|x| Rc::clone(x));
-				if let Some(rc_next) = rc_opt {
-					rc = rc_next;
-					prefix_index += 1;
-				} else {
-					return None;
-				}
-			}
-		}
-	}
+        let mut prefix_index = 0;
+        let mut rc = Rc::clone(&self.root);
+        loop {
+            if prefix_index > prefix_len {
+                return None;
+            } else {
+                if prefix_index == prefix_len {
+                    return if rc.borrow().is_word {
+                        Some(rc.borrow().to_fixed_node())
+                    } else {
+                        None
+                    };
+                }
+                let c = prefix[prefix_index];
+                let rc_opt = rc.borrow().children.get(&c).map(|x| Rc::clone(x));
+                if let Some(rc_next) = rc_opt {
+                    rc = rc_next;
+                    prefix_index += 1;
+                } else {
+                    return None;
+                }
+            }
+        }
+    }
 
-    fn is_word_recursive(&self, prefix: &str) -> bool {
+    pub fn is_word_recursive(&self, prefix: &str) -> bool {
         let prefix: Vec<char> = prefix.to_lowercase().chars().collect();
         let prefix_len = prefix.len();
         self.root.borrow().is_word_child(prefix, prefix_len, 0)
     }
-	
-	pub fn is_word_loop(&self, prefix: &str) -> bool {
+
+    pub fn is_word_loop(&self, prefix: &str) -> bool {
         let prefix: Vec<char> = prefix.to_lowercase().chars().collect();
         let prefix_len = prefix.len();
-		let mut prefix_index = 0;
-		let mut rc = Rc::clone(&self.root);
-		loop {
-			if prefix_index > prefix_len {
-				return false;
-			} else {
-				if prefix_index == prefix_len {
-					return rc.borrow().is_word;
-				}
-				let c = prefix[prefix_index];
-				let rc_opt = rc.borrow().children.get(&c).map(|x| Rc::clone(x));
-				if let Some(rc_next) = rc_opt {
-					rc = rc_next;
-					prefix_index += 1;
-				} else {
-					return false;
-				}
-			}
-		}
-	}
+        let mut prefix_index = 0;
+        let mut rc = Rc::clone(&self.root);
+        loop {
+            if prefix_index > prefix_len {
+                return false;
+            } else {
+                if prefix_index == prefix_len {
+                    return rc.borrow().is_word;
+                }
+                let c = prefix[prefix_index];
+                let rc_opt = rc.borrow().children.get(&c).map(|x| Rc::clone(x));
+                if let Some(rc_next) = rc_opt {
+                    rc = rc_next;
+                    prefix_index += 1;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
 
-	fn child_link_has_normal_ref_counts(rc: &ChildLink) -> bool {
-	
-		// The Rc pointing to a node will normally have a count of one, either from the BaseLetterTrie to the root
-		// node or from a parent node to a child node.
-		let strong_count = Rc::strong_count(rc);
+    fn child_link_has_normal_ref_counts(rc: &ChildLink) -> bool {
+        // The Rc pointing to a node will normally have a count of one, either from the BaseLetterTrie to the root
+        // node or from a parent node to a child node.
+        let strong_count = Rc::strong_count(rc);
 
-		// The weak count of the pointer to a node should equal the number of child nodes.
-		let weak_count = Rc::weak_count(rc);
+        // The weak count of the pointer to a node should equal the number of child nodes.
+        // let weak_count = Rc::weak_count(rc);
 
-		dbg!(strong_count);
-		dbg!(weak_count);
+        // dbg!(strong_count);
+        // dbg!(weak_count);
 
-		strong_count == 1
-		
-		// Don't check against the number of child nodes since this requires a borrow and the ParentLink might
-		// already have a mutable borrow against it.
-		// let child_node_count = rc.borrow().children.len();
-		// weak_count == child_node_count
-	}
+        strong_count == 1
 
-	fn parent_link_has_normal_ref_counts(weak: &ParentLink) -> bool {
-	
-		// This function can't reuse child_link_has_normal_ref_counts because that would mean upgrading weak
-		// into an Rc, thus changing the counts.
-	
-		// The Rc pointing to a node will normally have a count of one, either from the BaseLetterTrie to the root
-		// node or from a parent node to a child node.
-		let strong_count = Weak::strong_count(weak);
+        // Don't check against the number of child nodes since this requires a borrow and the ParentLink might
+        // already have a mutable borrow against it.
+        // let child_node_count = rc.borrow().children.len();
+        // weak_count == child_node_count
+    }
 
-		// The weak count of the pointer to a node should equal the number of child nodes.
-		let weak_count = Weak::weak_count(weak).unwrap();
+    fn parent_link_has_normal_ref_counts(weak: &ParentLink) -> bool {
+        // This function can't reuse child_link_has_normal_ref_counts because that would mean upgrading weak
+        // into an Rc, thus changing the counts.
 
-		// dbg!(strong_count);
-		// dbg!(weak_count);
+        // The Rc pointing to a node will normally have a count of one, either from the BaseLetterTrie to the root
+        // node or from a parent node to a child node.
+        let strong_count = Weak::strong_count(weak);
 
-		strong_count == 1
-		
-		// Don't check against the number of child nodes since this requires a borrow and the ParentLink might
-		// already have a mutable borrow against it.
-		// let child_node_count = weak.upgrade().unwrap().borrow().children.len();
-		// weak_count == child_node_count
-	}
+        // The weak count of the pointer to a node should equal the number of child nodes.
+        // let weak_count = Weak::weak_count(weak).unwrap();
 
-	fn opt_parent_link_has_normal_ref_counts(weak_opt: &Option<ParentLink>) -> bool {
-		if let Some(weak) = weak_opt {
-			Self::parent_link_has_normal_ref_counts(&weak)
-		} else {
-			true
-		}
-	}
+        // dbg!(strong_count);
+        // dbg!(weak_count);
 
+        strong_count == 1
+
+        // Don't check against the number of child nodes since this requires a borrow and the ParentLink might
+        // already have a mutable borrow against it.
+        // let child_node_count = weak.upgrade().unwrap().borrow().children.len();
+        // weak_count == child_node_count
+    }
+
+    fn opt_parent_link_has_normal_ref_counts(weak_opt: &Option<ParentLink>) -> bool {
+        if let Some(weak) = weak_opt {
+            Self::parent_link_has_normal_ref_counts(&weak)
+        } else {
+            true
+        }
+    }
 }
 
 impl LetterTrie for BaseLetterTrie {
@@ -546,51 +562,53 @@ impl Iterator for BaseLetterTrieIteratorBreadthFirst {
 
 pub struct BaseLetterTrieIteratorPrefix {
     prefix: Vec<char>,
-	prefix_len: usize,
-	prefix_index: usize,
-	rc: ChildLink,
+    prefix_len: usize,
+    prefix_index: usize,
+    rc: ChildLink,
 }
 
 impl Iterator for BaseLetterTrieIteratorPrefix {
     type Item = FixedNode;
 
     fn next(&mut self) -> Option<Self::Item> {
-		println!("BaseLetterTrieIteratorPrefix.next():\n{:#?}", self);
+        println!("BaseLetterTrieIteratorPrefix.next():\n{:#?}", self);
         if self.prefix_index > self.prefix_len {
             None
         } else {
-			let fixed_char_node = self.rc.borrow().to_fixed_node();
-			if self.prefix_index == self.prefix_len {
-				self.prefix_index += 1;
-				Some(fixed_char_node)
-			} else {
-				let c = self.prefix[self.prefix_index];
-				let rc_opt = self.rc.borrow().children.get(&c).map(|x| Rc::clone(x));
-				if let Some(rc_next) = rc_opt {
-					self.rc = rc_next;
-					self.prefix_index += 1;
-					Some(fixed_char_node)
-				} else {
-					None
-				}
-			}
+            let fixed_char_node = self.rc.borrow().to_fixed_node();
+            if self.prefix_index == self.prefix_len {
+                self.prefix_index += 1;
+                Some(fixed_char_node)
+            } else {
+                let c = self.prefix[self.prefix_index];
+                let rc_opt = self.rc.borrow().children.get(&c).map(|x| Rc::clone(x));
+                if let Some(rc_next) = rc_opt {
+                    self.rc = rc_next;
+                    self.prefix_index += 1;
+                    Some(fixed_char_node)
+                } else {
+                    None
+                }
+            }
         }
     }
 }
 
 impl Debug for BaseLetterTrieIteratorPrefix {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		let rc_string = self.rc.borrow().describe_one_line();
+        let rc_string = self.rc.borrow().describe_one_line();
         if f.alternate() {
-            write!(f, "BaseLetterTrieIteratorPrefix:\n\tprefix_len = {}\n\tprefix_index = {}\n\trc = {}",
-				self.prefix_len,
-				self.prefix_index,
-				&rc_string)
+            write!(
+                f,
+                "BaseLetterTrieIteratorPrefix:\n\tprefix_len = {}\n\tprefix_index = {}\n\trc = {}",
+                self.prefix_len, self.prefix_index, &rc_string
+            )
         } else {
-            write!(f, "BaseLetterTrieIteratorPrefix: prefix_len = {}, prefix_index = {}, rc = {}",
-				self.prefix_len,
-				self.prefix_index,
-				&rc_string)
+            write!(
+                f,
+                "BaseLetterTrieIteratorPrefix: prefix_len = {}, prefix_index = {}, rc = {}",
+                self.prefix_len, self.prefix_index, &rc_string
+            )
         }
     }
 }
@@ -612,13 +630,13 @@ impl Node {
         if self.is_frozen {
             self.node_count.unwrap()
         } else {
-			let this_count = 1;
-			let child_count: usize = self
-				.children
-				.values()
-				.map(|rc| rc.borrow().node_count())
-				.sum();
-			this_count + child_count
+            let this_count = 1;
+            let child_count: usize = self
+                .children
+                .values()
+                .map(|rc| rc.borrow().node_count())
+                .sum();
+            this_count + child_count
         }
     }
 
@@ -626,22 +644,22 @@ impl Node {
         if self.is_frozen {
             self.word_count.unwrap()
         } else {
-			let this_count = if self.is_word { 1 } else { 0 };
-			let child_count: usize = self
-				.children
-				.values()
-				.map(|rc| rc.borrow().word_count())
-				// .inspect(|x| println!("word_count(): {}", x))
-				.sum();
-			this_count + child_count
-		
-			/*
+            let this_count = if self.is_word { 1 } else { 0 };
+            let child_count: usize = self
+                .children
+                .values()
+                .map(|rc| rc.borrow().word_count())
+                // .inspect(|x| println!("word_count(): {}", x))
+                .sum();
+            this_count + child_count
+
+            /*
             let mut count = if self.is_word { 1 } else { 0 };
             for child_node in self.children.values().map(|x| x.borrow()) {
                 count += child_node.word_count();
             }
             count
-			*/
+            */
         }
     }
 
@@ -649,12 +667,12 @@ impl Node {
         if self.is_frozen {
             self.height.unwrap()
         } else {
-			let max_child_height: usize = self
-				.children
-				.values()
-				.map(|rc| rc.borrow().height())
-				.max()
-				.unwrap_or(0);
+            let max_child_height: usize = self
+                .children
+                .values()
+                .map(|rc| rc.borrow().height())
+                .max()
+                .unwrap_or(0);
             max_child_height + 1
         }
     }
@@ -677,8 +695,8 @@ impl Node {
         }
     }
 
-	/*
-	// Much slower.
+    /*
+    // Much slower.
     pub fn freeze(&mut self) {
         if !self.is_frozen {
             self.node_count = Some(self.node_count());
@@ -687,7 +705,7 @@ impl Node {
             self.is_frozen = true;
         }
     }
-	*/
+    */
 
     pub fn unfreeze(&mut self) {
         if self.is_frozen {
@@ -725,12 +743,7 @@ impl Node {
         }
     }
 
-    fn is_word_child(
-        &self,
-        prefix: Vec<char>,
-        prefix_len: usize,
-        prefix_index: usize,
-    ) -> bool {
+    fn is_word_child(&self, prefix: Vec<char>, prefix_len: usize, prefix_index: usize) -> bool {
         if prefix_index >= prefix_len {
             false
         } else {
@@ -841,10 +854,6 @@ impl Node {
             }
         }
     }
-
-    fn assert_not_frozen(&self) {
-        assert!(!self.is_frozen);
-    }
 }
 
 impl Debug for Node {
@@ -861,35 +870,35 @@ impl Debug for Node {
 }
 
 pub fn assert_small_root(t: &BaseLetterTrie) {
-	assert_eq!(
-		t.to_fixed_node(),
-		FixedNode {
-			c: ' ',
-			prefix: "".to_owned(),
-			depth: 0,
-			is_word: false,
-			child_count: 2,
-			node_count: 26,
-			word_count: 9,
-			height: 9,
-		}
-	);
+    assert_eq!(
+        t.to_fixed_node(),
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 2,
+            node_count: 26,
+            word_count: 9,
+            height: 9,
+        }
+    );
 }
 
 pub fn assert_large_root(t: &BaseLetterTrie) {
-	assert_eq!(
-		t.to_fixed_node(),
-		FixedNode {
-			c: ' ',
-			prefix: "".to_owned(),
-			depth: 0,
-			is_word: false,
-			child_count: 26,
-			node_count: 1_143_413,
-			word_count: 584_978,
-			height: 16,
-		}
-	);
+    assert_eq!(
+        t.to_fixed_node(),
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 26,
+            node_count: 1_143_413,
+            word_count: 584_978,
+            height: 16,
+        }
+    );
 }
 
 #[cfg(test)]
@@ -899,15 +908,23 @@ mod tests {
 
     #[test]
     fn small_root() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
-		assert_small_root(&t);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
+        assert_small_root(&t);
     }
 
     #[test]
     fn small_prefix_cross() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_eq!(
             t.find("cross"),
             Some(FixedNode {
@@ -925,8 +942,12 @@ mod tests {
 
     #[test]
     fn small_prefix_creatu() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_eq!(
             t.find("creatu"),
             Some(FixedNode {
@@ -944,8 +965,12 @@ mod tests {
 
     #[test]
     fn small_prefix_an() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_eq!(
             t.find("an"),
             Some(FixedNode {
@@ -963,8 +988,12 @@ mod tests {
 
     #[test]
     fn small_prefix_c() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_eq!(
             t.find("c"),
             Some(FixedNode {
@@ -982,147 +1011,183 @@ mod tests {
 
     #[test]
     fn small_prefix_not_found() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_eq!(t.find("casoun"), None);
     }
 
     #[test]
     fn large_read_vec_fill_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ReadVecFill);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::ReadVecFill,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_vec_fill_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::VecFill);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::VecFill,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_continuous_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_continuous_parallel_root() {
-		let dataset = Dataset::TestLargeSorted;
-        let t = BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ContinuousParallel);
-		assert_large_root(&t)
+        let dataset = Dataset::TestLargeSorted;
+        let t = BaseLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::ContinuousParallel,
+        );
+        assert_large_root(&t)
     }
 
-	#[test]
-	fn is_word_recursive_good_words() {
+    #[test]
+    fn is_word_recursive_good_words() {
         let t = large_tree();
-		let words = good_words();
-		for word in words {
-			assert_eq!(true, t.is_word_recursive(&word));
-		}
-	}	
+        let words = good_words();
+        for word in words {
+            assert_eq!(true, t.is_word_recursive(&word));
+        }
+    }
 
-	#[test]
-	fn is_word_loop_good_words() {
+    #[test]
+    fn is_word_loop_good_words() {
         let t = large_tree();
-		let words = good_words();
-		for word in words {
-			assert_eq!(true, t.is_word_loop(&word));
-		}
-	}	
+        let words = good_words();
+        for word in words {
+            assert_eq!(true, t.is_word_loop(&word));
+        }
+    }
 
-	#[test]
-	fn is_word_recursive_non_words() {
+    #[test]
+    fn is_word_recursive_non_words() {
         let t = large_tree();
-		let words = non_words();
-		for word in words {
-			assert_eq!(false, t.is_word_recursive(&word));
-		}
-	}	
+        let words = non_words();
+        for word in words {
+            assert_eq!(false, t.is_word_recursive(&word));
+        }
+    }
 
-	#[test]
-	fn is_word_loop_non_words() {
+    #[test]
+    fn is_word_loop_non_words() {
         let t = large_tree();
-		let words = non_words();
-		for word in words {
-			assert_eq!(false, t.is_word_loop(&word));
-		}
-	}	
+        let words = non_words();
+        for word in words {
+            assert_eq!(false, t.is_word_loop(&word));
+        }
+    }
 
     #[bench]
     fn bench_is_word_hash_set(b: &mut Bencher) {
-		let words = good_words();
-		let hash_set = large_dataset_words_hash_set();
+        let words = good_words();
+        let hash_set = large_dataset_words_hash_set();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, hash_set.contains(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, hash_set.contains(&word));
+            }
         });
     }
 
     #[bench]
     fn bench_is_word_recursive(b: &mut Bencher) {
-		let words = good_words();
+        let words = good_words();
         let t = large_tree();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, t.is_word_recursive(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, t.is_word_recursive(&word));
+            }
         });
     }
 
     #[bench]
     fn bench_is_word_loop(b: &mut Bencher) {
-		let words = good_words();
+        let words = good_words();
         let t = large_tree();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, t.is_word_loop(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, t.is_word_loop(&word));
+            }
         });
     }
 
     #[bench]
     fn bench_load_read_vec_fill(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ReadVecFill);
+            let dataset = Dataset::TestMediumSorted;
+            BaseLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::ReadVecFill,
+            );
         });
     }
 
     #[bench]
     fn bench_load_vec_fill(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::VecFill);
+            let dataset = Dataset::TestMediumSorted;
+            BaseLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::VecFill,
+            );
         });
     }
 
     #[bench]
     fn bench_load_continuous(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+            let dataset = Dataset::TestMediumSorted;
+            BaseLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::Continuous,
+            );
         });
     }
 
     #[bench]
     fn bench_load_continuous_parallel(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			BaseLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ContinuousParallel);
+            let dataset = Dataset::TestMediumSorted;
+            BaseLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::ContinuousParallel,
+            );
         });
     }
-	
-	fn large_tree() -> BaseLetterTrie {
-		BaseLetterTrie::from_file(
-			Dataset::TestLargeSorted.filename(),
-			true,
-			&LoadMethod::ContinuousParallel)
-	}
-	
+
+    fn large_tree() -> BaseLetterTrie {
+        BaseLetterTrie::from_file(
+            Dataset::TestLargeSorted.filename(),
+            true,
+            &LoadMethod::ContinuousParallel,
+        )
+    }
 }
 
 // if cfg!(debug_assertions) {      }

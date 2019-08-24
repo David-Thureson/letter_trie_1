@@ -76,10 +76,10 @@ impl NoParentLetterTrie {
         }
     }
 
-	/*
+    /*
     pub fn merge(&self, other: Self) {
         for other_child_node_key in other.node.children.keys() {
-			self.children.insert(other.children.remove(other_child_node_key);
+            self.children.insert(other.children.remove(other_child_node_key);
         }
     }
 
@@ -115,8 +115,8 @@ impl NoParentLetterTrie {
             stack: vec![Rc::clone(&self.node)],
         }
     }
-	*/
-		
+    */
+
     fn print(&self, detail_level: usize) {
         match detail_level {
             1 => println!("{:?}", self.to_fixed_node()),
@@ -124,7 +124,7 @@ impl NoParentLetterTrie {
             _ => (),
         }
     }
-	
+
     fn load_read_vec_fill(&mut self, filename: &str, opt: &DisplayDetailOptions) {
         let start = Instant::now();
         let content = fs::read_to_string(filename).expect("Error reading file.");
@@ -187,9 +187,9 @@ impl NoParentLetterTrie {
     }
 
     fn load_continuous_parallel(&mut self, filename: &str) {
-		self.load_continuous(filename);
-		
-		/*
+        self.load_continuous(filename);
+
+        /*
         let (tx, rx) = mpsc::channel();
 
         let file = File::open(filename).unwrap();
@@ -226,11 +226,11 @@ impl NoParentLetterTrie {
                 break;
             }
         }
-		*/
+        */
     }
-	
+
     // Returns the number of threads spawned, which will be 1 if there are items in the vector, otherwise 0.
-	/*
+    /*
     fn create_thread_for_part_of_vec(
         v: Vec<Vec<char>>,
         tx: mpsc::Sender<NoParentLetterTrie>,
@@ -249,33 +249,33 @@ impl NoParentLetterTrie {
             0
         }
     }
-	*/	
-	
+    */
+
     pub fn node_count(&self) -> usize {
-		let mut calc_count = 1;
-		for child_node in self.children.values() {
-			calc_count += child_node.node_count();
-		}
-		calc_count
+        let mut calc_count = 1;
+        for child_node in self.children.values() {
+            calc_count += child_node.node_count();
+        }
+        calc_count
     }
 
     pub fn word_count(&self) -> usize {
-		let mut count = if self.is_word { 1 } else { 0 };
-		for child_node in self.children.values() {
-			count += child_node.word_count();
-		}
-		count
+        let mut count = if self.is_word { 1 } else { 0 };
+        for child_node in self.children.values() {
+            count += child_node.word_count();
+        }
+        count
     }
 
     pub fn height(&self) -> usize {
-		let mut max_child_height = 0;
-		for child_node in self.children.values() {
-			let child_height = child_node.height();
-			if child_height > max_child_height {
-				max_child_height = child_height;
-			}
-		}
-		max_child_height + 1
+        let mut max_child_height = 0;
+        for child_node in self.children.values() {
+            let child_height = child_node.height();
+            if child_height > max_child_height {
+                max_child_height = child_height;
+            }
+        }
+        max_child_height + 1
     }
 
     fn find_child(
@@ -303,11 +303,7 @@ impl NoParentLetterTrie {
 
     pub fn describe_one_line(&self) -> String {
         let is_word_desc = if self.is_word { " (word)" } else { "" };
-        format!(
-            "NoParentLetterTrie: {}{}",
-            self.c,
-            is_word_desc
-        )
+        format!("NoParentLetterTrie: {}{}", self.c, is_word_desc)
     }
 
     pub fn describe_deep(&self, s: &mut String, depth: usize) {
@@ -316,11 +312,7 @@ impl NoParentLetterTrie {
             format_indent(depth, &(self.describe_one_line()))
         ));
         if depth < DEBUG_TREE_MAX_DEPTH {
-            for child_node in self
-                .children
-                .values()
-                .take(DEBUG_TREE_MAX_CHILDREN)
-            {
+            for child_node in self.children.values().take(DEBUG_TREE_MAX_CHILDREN) {
                 child_node.describe_deep(s, depth + 1);
             }
         }
@@ -352,13 +344,8 @@ impl NoParentLetterTrie {
         let prefix_len = prefix.len();
         self.is_word_child(prefix, prefix_len, 0)
     }
-	
-	fn is_word_child(
-        &self,
-        prefix: Vec<char>,
-        prefix_len: usize,
-        prefix_index: usize,
-    ) -> bool {
+
+    fn is_word_child(&self, prefix: Vec<char>, prefix_len: usize, prefix_index: usize) -> bool {
         if prefix_index >= prefix_len {
             false
         } else {
@@ -375,7 +362,6 @@ impl NoParentLetterTrie {
             }
         }
     }
-
 }
 
 impl LetterTrie for NoParentLetterTrie {
@@ -425,7 +411,6 @@ impl LetterTrie for NoParentLetterTrie {
             height: self.height(),
         }
     }
-
 }
 
 // unsafe impl Send for NoParentLetterTrie {}
@@ -468,35 +453,35 @@ impl Iterator for NoParentLetterTrieIteratorBreadthFirst {
 */
 
 pub fn assert_small_root(t: &NoParentLetterTrie) {
-	assert_eq!(
-		t.to_fixed_node(),
-		FixedNode {
-			c: ' ',
-			prefix: "".to_owned(),
-			depth: 0,
-			is_word: false,
-			child_count: 2,
-			node_count: 26,
-			word_count: 9,
-			height: 9,
-		}
-	);
+    assert_eq!(
+        t.to_fixed_node(),
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 2,
+            node_count: 26,
+            word_count: 9,
+            height: 9,
+        }
+    );
 }
 
 pub fn assert_large_root(t: &NoParentLetterTrie) {
-	assert_eq!(
-		t.to_fixed_node(),
-		FixedNode {
-			c: ' ',
-			prefix: "".to_owned(),
-			depth: 0,
-			is_word: false,
-			child_count: 26,
-			node_count: 1_143_413,
-			word_count: 584_978,
-			height: 16,
-		}
-	);
+    assert_eq!(
+        t.to_fixed_node(),
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 26,
+            node_count: 1_143_413,
+            word_count: 584_978,
+            height: 16,
+        }
+    );
 }
 
 #[cfg(test)]
@@ -506,181 +491,216 @@ mod tests {
 
     #[test]
     fn small_root() {
-		let dataset = Dataset::TestSmallUnsorted;
-        let t = NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
-		assert_small_root(&t);
+        let dataset = Dataset::TestSmallUnsorted;
+        let t = NoParentLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
+        assert_small_root(&t);
     }
 
     #[test]
     fn large_read_vec_fill_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ReadVecFill);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = NoParentLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::ReadVecFill,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_vec_fill_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::VecFill);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = NoParentLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::VecFill,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_continuous_root() {
-		let dataset = Dataset::TestLargeUnsorted;
-        let t = NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+        let dataset = Dataset::TestLargeUnsorted;
+        let t = NoParentLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::Continuous,
+        );
         assert_large_root(&t)
     }
 
     #[test]
     fn large_continuous_parallel_root() {
-		let dataset = Dataset::TestLargeSorted;
-        let t = NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ContinuousParallel);
-		assert_large_root(&t)
+        let dataset = Dataset::TestLargeSorted;
+        let t = NoParentLetterTrie::from_file(
+            &dataset.filename(),
+            dataset.is_sorted(),
+            &LoadMethod::ContinuousParallel,
+        );
+        assert_large_root(&t)
     }
 
-	#[test]
-	fn is_word_recursive_good_words() {
+    #[test]
+    fn is_word_recursive_good_words() {
         let t = large_tree();
-		let words = good_words();
-		for word in words {
-			assert_eq!(true, t.is_word_recursive(&word));
-		}
-	}	
+        let words = good_words();
+        for word in words {
+            assert_eq!(true, t.is_word_recursive(&word));
+        }
+    }
 
-	/*
-	#[test]
-	fn is_word_loop_good_words() {
+    /*
+    #[test]
+    fn is_word_loop_good_words() {
         let t = large_tree();
-		let words = good_words();
-		for word in words {
-			assert_eq!(true, t.is_word_loop(&word));
-		}
-	}	
-	*/
-	
-	#[test]
-	fn is_word_recursive_non_words() {
-        let t = large_tree();
-		let words = non_words();
-		for word in words {
-			assert_eq!(false, t.is_word_recursive(&word));
-		}
-	}	
+        let words = good_words();
+        for word in words {
+            assert_eq!(true, t.is_word_loop(&word));
+        }
+    }
+    */
 
-	/*
-	#[test]
-	fn is_word_loop_non_words() {
+    #[test]
+    fn is_word_recursive_non_words() {
         let t = large_tree();
-		let words = non_words();
-		for word in words {
-			assert_eq!(false, t.is_word_loop(&word));
-		}
-	}
-	*/
+        let words = non_words();
+        for word in words {
+            assert_eq!(false, t.is_word_recursive(&word));
+        }
+    }
+
+    /*
+    #[test]
+    fn is_word_loop_non_words() {
+        let t = large_tree();
+        let words = non_words();
+        for word in words {
+            assert_eq!(false, t.is_word_loop(&word));
+        }
+    }
+    */
 
     #[bench]
     fn bench_is_word_hash_set(b: &mut Bencher) {
-		let words = good_words();
-		let hash_set = large_dataset_words_hash_set();
+        let words = good_words();
+        let hash_set = large_dataset_words_hash_set();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, hash_set.contains(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, hash_set.contains(&word));
+            }
         });
     }
 
     #[bench]
     fn bench_is_word_recursive(b: &mut Bencher) {
-		let words = good_words();
+        let words = good_words();
         let t = large_tree();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, t.is_word_recursive(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, t.is_word_recursive(&word));
+            }
         });
     }
 
-	/*
+    /*
     #[bench]
     fn bench_is_word_loop(b: &mut Bencher) {
-		let words = good_words();
+        let words = good_words();
         let t = large_tree();
         b.iter(|| {
-			for word in words.clone() {
-				assert_eq!(true, t.is_word_loop(&word));
-			}	
+            for word in words.clone() {
+                assert_eq!(true, t.is_word_loop(&word));
+            }
         });
     }
-	*/
-	
+    */
+
     #[bench]
     fn bench_load_read_vec_fill(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ReadVecFill);
+            let dataset = Dataset::TestMediumSorted;
+            NoParentLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::ReadVecFill,
+            );
         });
     }
 
     #[bench]
     fn bench_load_vec_fill(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::VecFill);
+            let dataset = Dataset::TestMediumSorted;
+            NoParentLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::VecFill,
+            );
         });
     }
 
     #[bench]
     fn bench_load_continuous(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::Continuous);
+            let dataset = Dataset::TestMediumSorted;
+            NoParentLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::Continuous,
+            );
         });
     }
 
     #[bench]
     fn bench_load_continuous_parallel(b: &mut Bencher) {
         b.iter(|| {
-			let dataset = Dataset::TestMediumSorted;
-			NoParentLetterTrie::from_file(&dataset.filename(), dataset.is_sorted(), &LoadMethod::ContinuousParallel);
+            let dataset = Dataset::TestMediumSorted;
+            NoParentLetterTrie::from_file(
+                &dataset.filename(),
+                dataset.is_sorted(),
+                &LoadMethod::ContinuousParallel,
+            );
         });
     }
 
-	fn large_tree() -> NoParentLetterTrie {
-		NoParentLetterTrie::from_file(
-			Dataset::TestLargeSorted.filename(),
-			true,
-			&LoadMethod::ContinuousParallel)
-	}
-	
-	fn words_from_file(filename: &str) -> Vec<String> {
-		let file = File::open(filename).unwrap();
-		let mut v: Vec<String> = vec![];
-		for line in BufReader::new(file).lines() {
-			let line = line.unwrap();
-			let line = line.trim();
-			if line.len() > 0 {
-				v.push(line.to_string());
-			}
-		}
-		v		
-	}
-	
-	fn good_words() -> Vec<String> {
-		words_from_file(FILENAME_GOOD_WORDS)
-	}
-	
-	fn non_words() -> Vec<String> {
-		words_from_file(FILENAME_NON_WORDS)
-	}
-	
-	fn large_dataset_words_hash_set() -> HashSet<String> {
-		let mut hash_set = HashSet::new();
-		for word in words_from_file(Dataset::TestLargeSorted.filename()) {
-			hash_set.insert(word);
-		}
-		hash_set
-	}
+    fn large_tree() -> NoParentLetterTrie {
+        NoParentLetterTrie::from_file(
+            Dataset::TestLargeSorted.filename(),
+            true,
+            &LoadMethod::ContinuousParallel,
+        )
+    }
 
+    fn words_from_file(filename: &str) -> Vec<String> {
+        let file = File::open(filename).unwrap();
+        let mut v: Vec<String> = vec![];
+        for line in BufReader::new(file).lines() {
+            let line = line.unwrap();
+            let line = line.trim();
+            if line.len() > 0 {
+                v.push(line.to_string());
+            }
+        }
+        v
+    }
+
+    fn good_words() -> Vec<String> {
+        words_from_file(FILENAME_GOOD_WORDS)
+    }
+
+    fn non_words() -> Vec<String> {
+        words_from_file(FILENAME_NON_WORDS)
+    }
+
+    fn large_dataset_words_hash_set() -> HashSet<String> {
+        let mut hash_set = HashSet::new();
+        for word in words_from_file(Dataset::TestLargeSorted.filename()) {
+            hash_set.insert(word);
+        }
+        hash_set
+    }
 }
-

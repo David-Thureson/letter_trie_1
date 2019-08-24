@@ -37,94 +37,99 @@ fn main() {
 
     // try_combinations(&all_datasets, &all_methods, &all_types);
     // display_small_trie();
-	// try_large_trie();
+    // try_large_trie();
 
     // create_all_shuffled_files(&all_sizes);
-	// try_freeze();
-	// try_find_loop();
-	// try_find_loop_from_iterator();
-	// try_find_loop_like_iterator();
-	// create_find_files();
-	try_load_words();
-	
-	
+    // try_freeze();
+    // try_find_loop();
+    // try_find_loop_from_iterator();
+    // try_find_loop_like_iterator();
+    // create_find_files();
+    try_load_words();
 }
 
 fn try_load_words() {
-	dbg!(good_words().len());
-	dbg!(non_words().len());
-	dbg!(large_dataset_words_hash_set().len());
+    dbg!(good_words().len());
+    dbg!(non_words().len());
+    dbg!(large_dataset_words_hash_set().len());
 }
 
 fn small_trie() -> BaseLetterTrie {
     BaseLetterTrie::from_file(
         &Dataset::TestSmallSorted.filename(),
         true,
-        &LoadMethod::Continuous)
+        &LoadMethod::Continuous,
+    )
 }
 
 fn large_trie() -> BaseLetterTrie {
     BaseLetterTrie::from_file(
         &Dataset::TestLargeSorted.filename(),
         true,
-        &LoadMethod::ContinuousParallel)
+        &LoadMethod::ContinuousParallel,
+    )
 }
 
 fn try_large_trie() {
-	let dataset = Dataset::TestLargeSorted;
-	let load_method = LoadMethod::ContinuousParallel;
-	let letter_trie_type = LetterTrieType::Base;
+    let dataset = Dataset::TestLargeSorted;
+    let load_method = LoadMethod::ContinuousParallel;
+    let letter_trie_type = LetterTrieType::Base;
     let opt = DisplayDetailOptions::make_moderate(&dataset, &load_method, &letter_trie_type);
-    let t = BaseLetterTrie::from_file_test(&dataset.filename(), dataset.is_sorted(), &load_method, &opt);
-	println!("{:#?}", &t.to_fixed_node());
+    let t = BaseLetterTrie::from_file_test(
+        &dataset.filename(),
+        dataset.is_sorted(),
+        &load_method,
+        &opt,
+    );
+    println!("{:#?}", &t.to_fixed_node());
 }
 
 fn try_find_loop() {
-	let t = small_trie();
-	// let word = "creature";
-	let word = "and";
-	println!("\n{:#?}", t.find(word));
-	println!("\n{:#?}", t.find_loop(word));
+    let t = small_trie();
+    // let word = "creature";
+    let word = "and";
+    println!("\n{:#?}", t.find(word));
+    println!("\n{:#?}", t.find_loop(word));
 }
 
 /*
 fn try_find_loop_from_iterator() {
-	let t = small_trie();
-	// let word = "creature";
-	let word = "and";
-	println!("\n{:#?}", t.find(word));
-	println!("\n{:#?}", t.find_loop_from_iterator(word));
+    let t = small_trie();
+    // let word = "creature";
+    let word = "and";
+    println!("\n{:#?}", t.find(word));
+    println!("\n{:#?}", t.find_loop_from_iterator(word));
 }
 */
 
 /*
 fn try_find_loop_like_iterator() {
-	let t = small_trie();
-	let mut prefix = "and";
-	println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
-	prefix = "ands";
-	println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
-	prefix = "creature";
-	println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
-	prefix = "creatu";
-	println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
+    let t = small_trie();
+    let mut prefix = "and";
+    println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
+    prefix = "ands";
+    println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
+    prefix = "creature";
+    println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
+    prefix = "creatu";
+    println!("\n\"{}\":\n{:#?}", prefix, t.find_loop_like_iterator(prefix));
 }
 */
 
 fn try_freeze() {
-	let fn_name = "try_freeze()";
-	let mut t = large_trie();
+    let fn_name = "try_freeze()";
+    let mut t = large_trie();
     print_elapsed(true, fn_name, LABEL_PRINT_ROOT, || t.print_root_alt());
-	base_letter_trie::assert_large_root(&t);
-	
+    base_letter_trie::assert_large_root(&t);
+
     print_elapsed(true, fn_name, LABEL_FREEZE, || t.freeze());
     print_elapsed(true, fn_name, LABEL_PRINT_ROOT, || t.print_root_alt());
-	base_letter_trie::assert_large_root(&t);
-	
+    base_letter_trie::assert_large_root(&t);
+
     print_elapsed(true, fn_name, LABEL_UNFREEZE, || t.unfreeze());
     print_elapsed(true, fn_name, LABEL_PRINT_ROOT, || t.print_root_alt());
-	base_letter_trie::assert_large_root(&t);
-}	
+    base_letter_trie::assert_large_root(&t);
+}
 
 fn display_small_trie() {
     let t = BaseLetterTrie::from_file(
@@ -145,7 +150,11 @@ fn try_combinations(datasets: &[Dataset], methods: &[LoadMethod], types: &[Lette
     }
 }
 
-fn try_one_combination(dataset: &Dataset, load_method: &LoadMethod, letter_trie_type: &LetterTrieType) {
+fn try_one_combination(
+    dataset: &Dataset,
+    load_method: &LoadMethod,
+    letter_trie_type: &LetterTrieType,
+) {
     let filename = &dataset.filename();
     let is_sorted = dataset.is_sorted();
     // let opt = DisplayDetailOptions::make_overall_time(dataset, load_method, letter_trie_type);
@@ -157,7 +166,7 @@ fn try_one_combination(dataset: &Dataset, load_method: &LoadMethod, letter_trie_
         LetterTrieType::Base => {
             BaseLetterTrie::from_file_test(filename, is_sorted, &load_method, &opt);
         }
-		LetterTrieType::NoParent => {
+        LetterTrieType::NoParent => {
             if is_sorted || *load_method != LoadMethod::ContinuousParallel {
                 NoParentLetterTrie::from_file_test(filename, is_sorted, &load_method, &opt);
             }
@@ -169,15 +178,16 @@ fn try_one_combination(dataset: &Dataset, load_method: &LoadMethod, letter_trie_
 }
 
 fn create_find_files() {
-    let content = fs::read_to_string(Dataset::TestLargeSorted.filename()).expect("Error reading file.");
+    let content =
+        fs::read_to_string(Dataset::TestLargeSorted.filename()).expect("Error reading file.");
     let source_vec: Vec<&str> = content.split('\n').collect();
-	let mut words = vec![];
-	let mut non_words = vec![];
-	for word in source_vec.iter().step_by(500).take(1_000) {
-		words.push(word.to_owned());
-		non_words.push(format!("{}q", word));
-	}
-	
+    let mut words = vec![];
+    let mut non_words = vec![];
+    for word in source_vec.iter().step_by(500).take(1_000) {
+        words.push(word.to_owned());
+        non_words.push(format!("{}q", word));
+    }
+
     let mut file = File::create(FILENAME_GOOD_WORDS).expect("Error creating target file.");
     for word in words {
         writeln!(file, "{}", word).expect("Error writing a line.");
@@ -187,7 +197,6 @@ fn create_find_files() {
     for word in non_words {
         writeln!(file, "{}", word).expect("Error writing a line.");
     }
-	
 }
 
 /*
