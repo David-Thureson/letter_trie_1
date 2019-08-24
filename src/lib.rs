@@ -46,6 +46,34 @@ const LABEL_STEP_SORT_VECTOR: &str = "sort_vector";
 const LABEL_STEP_READ_AND_VECTOR: &str = "make vector from file";
 const LABEL_STEP_LOAD_FROM_VEC: &str = "load from vector";
 
+/// A [letter trie]: https://www.geeksforgeeks.org/trie-insert-and-search/ with implementations that use different
+/// approaches for parent and child links but otherwise work the same.
+pub trait LetterTrie {
+    /// Create a trie from a text file containing one word per line. The words may be upper- or lowercase and
+    /// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
+    /// ignored.
+    fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self;
+
+    fn from_file_test(
+        filename: &str,
+        is_sorted: bool,
+        load_method: &LoadMethod,
+        opt: &DisplayDetailOptions,
+    ) -> Self;
+
+    fn find(&self, prefix: &str) -> Option<FixedNode>;
+
+    fn to_fixed_node(&self) -> FixedNode;
+
+    fn print_root(&self) {
+        println!("{:?}", self.to_fixed_node());
+    }
+
+    fn print_root_alt(&self) {
+        println!("{:#?}", self.to_fixed_node());
+    }
+}
+
 /// Enum used to choose the collection of words to load in the letter trie. Whether the words are sorted in the
 /// collection may affect the speed of loading the trie depending on the chosen LoadMethod but the resulting trie
 /// will be identical either way.
@@ -72,7 +100,7 @@ impl Dataset {
     ///
     /// Get the path to a file that has 10,000 words.
     ///
-    /// ```
+    /// ```rust
     /// let filename = letter_trie::Dataset::TestMediumSorted.filename();
     /// ```
     pub fn filename(&self) -> &str {
@@ -92,7 +120,7 @@ impl Dataset {
     ///
     /// Get the path to a file that has 10,000 words.
     ///
-    /// ```
+    /// ```rust
     /// let is_sorted = letter_trie::Dataset::TestLargeUnsorted.is_sorted();
     /// assert_eq!(false, is_sorted);
     /// ```
@@ -204,34 +232,6 @@ pub struct FixedNode {
     node_count: usize,
     word_count: usize,
     height: usize,
-}
-
-/// A [letter trie](https://www.geeksforgeeks.org/trie-insert-and-search/) with implementations that use different
-/// approaches for parent and child links but otherwise work the same.
-pub trait LetterTrie {
-    /// Create a trie from a text file containing one word per line. The words may be upper- or lowercase and
-    /// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
-    /// ignored.
-    fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self;
-
-    fn from_file_test(
-        filename: &str,
-        is_sorted: bool,
-        load_method: &LoadMethod,
-        opt: &DisplayDetailOptions,
-    ) -> Self;
-
-    fn find(&self, prefix: &str) -> Option<FixedNode>;
-
-    fn to_fixed_node(&self) -> FixedNode;
-
-    fn print_root(&self) {
-        println!("{:?}", self.to_fixed_node());
-    }
-
-    fn print_root_alt(&self) {
-        println!("{:#?}", self.to_fixed_node());
-    }
 }
 
 lazy_static! {

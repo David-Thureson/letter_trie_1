@@ -25,7 +25,7 @@ type ChildLink = Rc<RefCell<Node>>;
 // The weak count of the pointer to a node should always equal that node's number of child nodes.
 type ParentLink = Weak<RefCell<Node>>;
 
-/// The baseline implementation of a [letter trie](https://www.geeksforgeeks.org/trie-insert-and-search/) with added
+/// The baseline implementation of a [letter trie]: https://www.geeksforgeeks.org/trie-insert-and-search/ with added
 /// references from nodes to their parents to experiment with Rc and RefCell. Other trees use different approaches
 /// for parent and child links but otherwise work the same.
 pub struct BaseLetterTrie {
@@ -37,8 +37,8 @@ impl BaseLetterTrie {
     /// Constructor for the letter trie. The root of each trie is the same regardless of what words will be added to
     /// the trie so there are no parameters.
     ///
-    /// #Examples
-    /// ```
+    /// # Examples
+    /// ```rust
     /// let mut trie = letter_trie::BaseLetterTrie::new();
     /// ```
     pub fn new() -> BaseLetterTrie {
@@ -89,7 +89,6 @@ impl BaseLetterTrie {
         debug_assert!(self.root.borrow().c == ' ');
         if v_len > 0 {
             BaseLetterTrie::add_from_vec_chars_one_char(&self.root, v, v_len, char_index);
-            // BaseLetterTrie::add_from_vec_chars_rc_loop(&self.root, v, v_len, char_index);
         }
     }
 
@@ -649,17 +648,8 @@ impl Node {
                 .children
                 .values()
                 .map(|rc| rc.borrow().word_count())
-                // .inspect(|x| println!("word_count(): {}", x))
                 .sum();
             this_count + child_count
-
-            /*
-            let mut count = if self.is_word { 1 } else { 0 };
-            for child_node in self.children.values().map(|x| x.borrow()) {
-                count += child_node.word_count();
-            }
-            count
-            */
         }
     }
 
@@ -694,18 +684,6 @@ impl Node {
             self.is_frozen = true;
         }
     }
-
-    /*
-    // Much slower.
-    pub fn freeze(&mut self) {
-        if !self.is_frozen {
-            self.node_count = Some(self.node_count());
-            self.word_count = Some(self.word_count());
-            self.height = Some(self.height());
-            self.is_frozen = true;
-        }
-    }
-    */
 
     pub fn unfreeze(&mut self) {
         if self.is_frozen {
@@ -1189,5 +1167,3 @@ mod tests {
         )
     }
 }
-
-// if cfg!(debug_assertions) {      }
