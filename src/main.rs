@@ -13,9 +13,6 @@ use std::mem;
 
 extern crate typename;
 
-extern crate util;
-use util::*;
-
 const FILENAME_GOOD_WORDS: &str = "C:\\Data\\Text\\test_good_words.txt";
 const FILENAME_NON_WORDS: &str = "C:\\Data\\Text\\test_non_words.txt";
 const USE_CHAR_GET_COUNTER: bool = false;

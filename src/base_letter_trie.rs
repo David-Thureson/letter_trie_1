@@ -1,9 +1,5 @@
 extern crate test;
 
-// util has macros like typed_vals! and functions like print_elapsed().
-extern crate util;
-use util::*;
-
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::BTreeMap;

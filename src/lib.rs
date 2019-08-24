@@ -4,9 +4,6 @@
 #![feature(test)]
 extern crate test;
 
-extern crate util;
-use util::*;
-
 #[macro_use]
 extern crate lazy_static;
 
@@ -21,8 +18,8 @@ pub mod base_letter_trie;
 pub use base_letter_trie::BaseLetterTrie;
 pub mod no_parent_letter_trie;
 pub use no_parent_letter_trie::NoParentLetterTrie;
-// pub mod min_struct_letter_trie;
-// pub use min_struct_letter_trie::MinStructLetterTrie;
+pub mod util;
+pub use util::*;
 
 const FILENAME_SMALL_SORTED: &str = "words_9_sorted.txt";
 const FILENAME_SMALL_UNSORTED: &str = "words_9_unsorted.txt";

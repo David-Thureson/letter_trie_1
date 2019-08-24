@@ -1,20 +1,8 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(unused_assignments)]
-
-extern crate util;
-use util::*;
-
-use std::cmp;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::fmt::{self, Debug};
 use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc;
-use std::sync::mpsc;
-use std::thread;
 use std::time::Instant;
 
 use crate::*;
