@@ -1,5 +1,5 @@
-use std::time::Instant;
 use num_format::{Locale, ToFormattedString};
+use std::time::Instant;
 
 // type_name_of() seems to dereference automatically so it can't tell the difference between a basic value and a
 // reference to that value.
@@ -72,29 +72,28 @@ macro_rules! showrc {
 }
 
 pub fn format_indent(depth: usize, s: &str) -> String {
-	format!("{}{}", "    ".repeat(depth), s)
+    format!("{}{}", "    ".repeat(depth), s)
 }
 
 pub fn print_indent(depth: usize, s: &str) {
-	println!("{}", format_indent(depth, s));
+    println!("{}", format_indent(depth, s));
 }
 
 pub fn print_elapsed<F>(display: bool, case_label: &str, step_label: &str, mut f: F)
-	where F: FnMut() -> ()
+where
+    F: FnMut() -> (),
 {
-	let start = Instant::now();
-	f();
-	print_elapsed_from_start(display, case_label, step_label, start);
+    let start = Instant::now();
+    f();
+    print_elapsed_from_start(display, case_label, step_label, start);
 }
 
-pub fn print_elapsed_from_start(display: bool, case_label: &str, step_label: &str, start: Instant)
-{
-	if display {
-		println!("\n{}: {} = {:?}", case_label, step_label, start.elapsed());
-	}
+pub fn print_elapsed_from_start(display: bool, case_label: &str, step_label: &str, start: Instant) {
+    if display {
+        println!("\n{}: {} = {:?}", case_label, step_label, start.elapsed());
+    }
 }
 
 pub fn format_count(val: usize) -> String {
     val.to_formatted_string(&Locale::en)
 }
-
