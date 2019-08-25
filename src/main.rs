@@ -42,7 +42,17 @@ fn main() {
     // try_find_loop_from_iterator();
     // try_find_loop_like_iterator();
     // create_find_files();
-    try_load_words();
+    // try_load_words();	
+	print_node_counts();
+}
+
+fn print_node_counts() {
+	// vec![Dataset::TestSmallSorted, Dataset::TestMediumSorted, Dataset::TestLargeSorted]].iter().foreach(|dataset| {
+	// 	let t = 
+	//});
+	small_trie().print_root_alt();
+	medium_trie().print_root_alt();
+	large_trie().print_root_alt();
 }
 
 fn try_load_words() {
@@ -54,6 +64,14 @@ fn try_load_words() {
 fn small_trie() -> BaseLetterTrie {
     BaseLetterTrie::from_file(
         &Dataset::TestSmallSorted.filename(),
+        true,
+        &LoadMethod::Continuous,
+    )
+}
+
+fn medium_trie() -> BaseLetterTrie {
+    BaseLetterTrie::from_file(
+        &Dataset::TestMediumSorted.filename(),
         true,
         &LoadMethod::Continuous,
     )

@@ -775,12 +775,12 @@ impl Node {
             "{}\n",
             format_indent(depth, &(self.describe_one_line()))
         ));
-        if depth < DEBUG_TREE_MAX_DEPTH {
+        if depth < DEBUG_TRIE_MAX_DEPTH {
             for child_node in self
                 .children
                 .values()
                 .map(|x| x.borrow())
-                .take(DEBUG_TREE_MAX_CHILDREN)
+                .take(DEBUG_TRIE_MAX_CHILDREN)
             {
                 child_node.describe_deep(s, depth + 1);
             }
