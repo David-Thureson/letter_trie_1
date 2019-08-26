@@ -59,43 +59,43 @@ const LABEL_STEP_LOAD_FROM_VEC: &str = "load from vector";
 /// still in most cases going to run out of trie before we run out of sequences of dice.
 pub trait LetterTrie {
     /// Create a trie from words in a text file.
-	///
-	/// The text file may contain up to one word per line. The words may be upper- or lowercase and
+    ///
+    /// The text file may contain up to one word per line. The words may be upper- or lowercase and
     /// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
     /// ignored.
-	///
-	/// # Errors
-	///
-	/// This will produce an incorrect trie if the file contains lines with more than one word.
-	///
-	/// This may crash or produce an incorrect trie if all three of these conditions are met:
-	/// - The words in the file are not sorted at least by their first letter (subsequent letters don't matter).
-	/// - `is_sorted` is incorrectly set to `true`.
-	/// - The load method uses an optimization that relies on the words being sorted by their first letter. Currently the only such load method is `LoadMethod::ContinuousParallel`.
-	///
-	/// # Panics
-	///
-	/// Panics if the file does not exist or can't be opened for reading.
+    ///
+    /// # Errors
+    ///
+    /// This will produce an incorrect trie if the file contains lines with more than one word.
+    ///
+    /// This may crash or produce an incorrect trie if all three of these conditions are met:
+    /// - The words in the file are not sorted at least by their first letter (subsequent letters don't matter).
+    /// - `is_sorted` is incorrectly set to `true`.
+    /// - The load method uses an optimization that relies on the words being sorted by their first letter. Currently the only such load method is `LoadMethod::ContinuousParallel`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the file does not exist or can't be opened for reading.
     fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self;
 
     /// Create a trie from words in a text file, optionally displaying elapsed time for each step.
-	///
-	/// The text file may contain up to one word per line. The words may be upper- or lowercase and
+    ///
+    /// The text file may contain up to one word per line. The words may be upper- or lowercase and
     /// blank lines and whitespace before or after the words will be ignored. Duplicate words will also be
     /// ignored.
-	///
-	/// # Errors
-	///
-	/// This will produce an incorrect trie if the file contains lines with more than one word.
-	///
-	/// This may crash or produce an incorrect trie if all three of these conditions are met:
-	/// - The words in the file are not sorted at least by their first letter (subsequent letters don't matter).
-	/// - `is_sorted` is incorrectly set to `true`.
-	/// - The load method uses an optimization that relies on the words being sorted by their first letter. Currently the only such load method is `LoadMethod::ContinuousParallel`.
-	///
-	/// # Panics
-	///
-	/// Panics if the file does not exist or can't be opened for reading.
+    ///
+    /// # Errors
+    ///
+    /// This will produce an incorrect trie if the file contains lines with more than one word.
+    ///
+    /// This may crash or produce an incorrect trie if all three of these conditions are met:
+    /// - The words in the file are not sorted at least by their first letter (subsequent letters don't matter).
+    /// - `is_sorted` is incorrectly set to `true`.
+    /// - The load method uses an optimization that relies on the words being sorted by their first letter. Currently the only such load method is `LoadMethod::ContinuousParallel`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the file does not exist or can't be opened for reading.
     fn from_file_test(
         filename: &str,
         is_sorted: bool,
@@ -103,22 +103,22 @@ pub trait LetterTrie {
         opt: &DisplayDetailOptions,
     ) -> Self;
 
-	/// Given a word or a partial word, find the corresponding node in the trie if it exists.
+    /// Given a word or a partial word, find the corresponding node in the trie if it exists.
     fn find(&self, prefix: &str) -> Option<FixedNode>;
 
-	/// For testing or debugging, create a FixedNode from the root node of a trie.
+    /// For testing or debugging, create a FixedNode from the root node of a trie.
     fn to_fixed_node(&self) -> FixedNode;
 
-	/// Print one line of information about the root node of a trie.
-	///
-	/// This includes things like the number of nodes and words in the trie and the maximum height.
+    /// Print one line of information about the root node of a trie.
+    ///
+    /// This includes things like the number of nodes and words in the trie and the maximum height.
     fn print_root(&self) {
         println!("{:?}", self.to_fixed_node());
     }
 
-	/// Print information about the root node of a trie over multiple lines.
-	///
-	/// This includes things like the number of nodes and words in the trie and the maximum height.
+    /// Print information about the root node of a trie over multiple lines.
+    ///
+    /// This includes things like the number of nodes and words in the trie and the maximum height.
     fn print_root_alt(&self) {
         println!("{:#?}", self.to_fixed_node());
     }
@@ -152,8 +152,8 @@ impl Dataset {
     /// Get the path to a file that has 10,000 words.
     ///
     /// ```rust
-	/// use letter_trie::*;
-	///
+    /// use letter_trie::*;
+    ///
     /// let filename: &str = Dataset::TestMediumSorted.filename();
     /// ```
     pub fn filename(&self) -> &str {
@@ -174,8 +174,8 @@ impl Dataset {
     /// Get the path to a file that has 10,000 words.
     ///
     /// ```rust
-	/// use letter_trie::*;
-	///
+    /// use letter_trie::*;
+    ///
     /// let is_sorted: bool = Dataset::TestLargeUnsorted.is_sorted();
     /// assert_eq!(false, is_sorted);
     /// ```
@@ -208,8 +208,8 @@ pub enum LoadMethod {
     /// Build the trie while reading lines from the file.
     Continuous,
     /// Build the trie by evaluating the set of words for each starting letter in its own thread.
-	///
-	/// Read lines from the file, and as soon as all of the words for each starting letter have been read spawn affect
+    ///
+    /// Read lines from the file, and as soon as all of the words for each starting letter have been read spawn affect
     /// thread to build a trie for that starting letter while continuing to read from the file in the first thread.
     /// As each thread finishes building its trie, merge that trie into the main trie.
     ContinuousParallel,
@@ -232,13 +232,13 @@ pub struct DisplayDetailOptions {
 }
 
 impl DisplayDetailOptions {
-	/// Create a set of options that display nothing while building the trie.
-	///
+    /// Create a set of options that display nothing while building the trie.
+    ///
     /// # Examples
     ///
     /// ```rust
-	/// use letter_trie::*;
-	///
+    /// use letter_trie::*;
+    ///
     /// let display_opt: DisplayDetailOptions = DisplayDetailOptions::make_no_display();
     /// ```
     pub fn make_no_display() -> Self {
@@ -250,26 +250,26 @@ impl DisplayDetailOptions {
         }
     }
 
-	/// Create a set of options that display only the overall time to build the trie. 
+    /// Create a set of options that display only the overall time to build the trie.
     /// # Examples
     ///
     /// ```rust
-	/// use letter_trie::*;
-	///
-	/// let dataset = Dataset::TestMediumUnsorted;
-	/// let load_method = LoadMethod::Continuous;
-	/// let letter_trie_type = LetterTrieType::NoParent;
-	///
+    /// use letter_trie::*;
+    ///
+    /// let dataset = Dataset::TestMediumUnsorted;
+    /// let load_method = LoadMethod::Continuous;
+    /// let letter_trie_type = LetterTrieType::NoParent;
+    ///
     /// let display_opt: DisplayDetailOptions = DisplayDetailOptions::make_overall_time(
-	///     &dataset,
-	///     &load_method,
-	///     &letter_trie_type);
-	///
-	/// let mut trie: BaseLetterTrie = BaseLetterTrie::from_file_test(
-	///     &dataset.filename(),
-	///     dataset.is_sorted(),
-	///     &load_method,
-	///     &display_opt);
+    ///     &dataset,
+    ///     &load_method,
+    ///     &letter_trie_type);
+    ///
+    /// let mut trie: BaseLetterTrie = BaseLetterTrie::from_file_test(
+    ///     &dataset.filename(),
+    ///     dataset.is_sorted(),
+    ///     &load_method,
+    ///     &display_opt);
     /// ```
     pub fn make_overall_time(
         dataset: &Dataset,
@@ -284,28 +284,28 @@ impl DisplayDetailOptions {
         }
     }
 
-	/// Create a set of options that display the overall time to build the trie as well as the time for each step.
-	///
-	/// At the end, if the trie is small enough it will be displayed in its entirety, otherwise only the root node.
+    /// Create a set of options that display the overall time to build the trie as well as the time for each step.
+    ///
+    /// At the end, if the trie is small enough it will be displayed in its entirety, otherwise only the root node.
     /// # Examples
     ///
     /// ```rust
-	/// use letter_trie::*;
-	///
-	/// let dataset = Dataset::TestLargeSorted;
-	/// let load_method = LoadMethod::ContinuousParallel;
-	/// let letter_trie_type = LetterTrieType::Base;
-	///
+    /// use letter_trie::*;
+    ///
+    /// let dataset = Dataset::TestLargeSorted;
+    /// let load_method = LoadMethod::ContinuousParallel;
+    /// let letter_trie_type = LetterTrieType::Base;
+    ///
     /// let display_opt: DisplayDetailOptions = DisplayDetailOptions::make_overall_time(
-	///     &dataset,
-	///     &load_method,
-	///     &letter_trie_type);
-	///
-	/// let mut trie: BaseLetterTrie = BaseLetterTrie::from_file_test(
-	///     &dataset.filename(),
-	///     dataset.is_sorted(),
-	///     &load_method,
-	///     &display_opt);
+    ///     &dataset,
+    ///     &load_method,
+    ///     &letter_trie_type);
+    ///
+    /// let mut trie: BaseLetterTrie = BaseLetterTrie::from_file_test(
+    ///     &dataset.filename(),
+    ///     dataset.is_sorted(),
+    ///     &load_method,
+    ///     &display_opt);
     /// ```
     pub fn make_moderate(
         dataset: &Dataset,
@@ -323,35 +323,34 @@ impl DisplayDetailOptions {
         }
     }
 
-	/// Create the label to be displayed during the trie build process.
-	///
-	/// The label shows the chosen dataset and build method.
-	///
-	/// Usually it's not necessary to call this function directly since it's handled in the call to
-	/// `DisplayDetailOptions::make_moderate()` and related functions.
-	///
-	/// # Examples
-	///
-	/// ```rust
-	/// use letter_trie::*;
-	///
-	/// let dataset = Dataset::TestSmallSorted;
-	/// let load_method = LoadMethod::Continuous;
-	/// let letter_trie_type = LetterTrieType::Base;
-	///
-	/// let label: String = DisplayDetailOptions::get_test_label(
-	///     &dataset,
-	///     &load_method,
-	///     &letter_trie_type);
-	/// ```
-	pub fn get_test_label(
-		dataset: &Dataset,
-		load_method: &LoadMethod,
-		letter_trie_type: &LetterTrieType,
-	) -> String {
-		format!("{:?}; {:?}; {:?}", dataset, load_method, letter_trie_type).to_owned()
-	}
-
+    /// Create the label to be displayed during the trie build process.
+    ///
+    /// The label shows the chosen dataset and build method.
+    ///
+    /// Usually it's not necessary to call this function directly since it's handled in the call to
+    /// `DisplayDetailOptions::make_moderate()` and related functions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use letter_trie::*;
+    ///
+    /// let dataset = Dataset::TestSmallSorted;
+    /// let load_method = LoadMethod::Continuous;
+    /// let letter_trie_type = LetterTrieType::Base;
+    ///
+    /// let label: String = DisplayDetailOptions::get_test_label(
+    ///     &dataset,
+    ///     &load_method,
+    ///     &letter_trie_type);
+    /// ```
+    pub fn get_test_label(
+        dataset: &Dataset,
+        load_method: &LoadMethod,
+        letter_trie_type: &LetterTrieType,
+    ) -> String {
+        format!("{:?}; {:?}; {:?}", dataset, load_method, letter_trie_type).to_owned()
+    }
 }
 
 /// A concrete copy of a real trie node with all owned data, used for testing and debugging.
@@ -361,7 +360,7 @@ impl DisplayDetailOptions {
 /// so it's used in the unit tests. It also allows us to confirm that corresponding nodes between different
 /// implementations of the trie, or tries built with different approaches, ultimately resolve to the same values.
 /// # Examples
-/// 
+///
 /// In a unit test, create a large trie using a particular implementation of LetterTrie and a particular building method,
 /// then confirm that the root node has all of the expected values.
 ///
@@ -462,14 +461,14 @@ pub struct CharGetCounter {
 }
 
 impl CharGetCounter {
-	/// Set the counters to zero at the start of a trie build.
+    /// Set the counters to zero at the start of a trie build.
     pub fn reset() {
         let mut counter = CHAR_GET_COUNTER.lock().unwrap();
         counter.hit_count = 0;
         counter.miss_count = 0;
     }
 
-	/// Record a single hit or miss.
+    /// Record a single hit or miss.
     pub fn record(is_hit: bool) {
         let mut counter = CHAR_GET_COUNTER.lock().unwrap();
         if is_hit {
@@ -479,7 +478,7 @@ impl CharGetCounter {
         }
     }
 
-	/// View the results.
+    /// View the results.
     pub fn print() {
         let counter = CHAR_GET_COUNTER.lock().unwrap();
         let total_count = counter.hit_count + counter.miss_count;
@@ -496,10 +495,10 @@ impl CharGetCounter {
         }
     }
 
-	/// View the results only if we have some results.
-	///
-	/// This allows us to turn counting on or off for a particular build process without the calling code
-	/// having to know whether it's enabled.
+    /// View the results only if we have some results.
+    ///
+    /// This allows us to turn counting on or off for a particular build process without the calling code
+    /// having to know whether it's enabled.
     pub fn print_optional() {
         let total_count: usize;
         {
