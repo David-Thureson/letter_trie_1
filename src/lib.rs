@@ -2,6 +2,8 @@
 #![feature(weak_counts)]
 #![allow(clippy::new_without_default)]
 #![feature(test)]
+
+extern crate regex;
 extern crate test;
 
 #[macro_use]
@@ -20,26 +22,35 @@ pub mod no_parent_letter_trie;
 pub use no_parent_letter_trie::NoParentLetterTrie;
 pub mod util;
 pub use util::*;
+pub mod text_util;
+pub use text_util::*;
 
-const FILENAME_SMALL_SORTED: &str = "words_9_sorted.txt";
-const FILENAME_SMALL_UNSORTED: &str = "words_9_unsorted.txt";
-const FILENAME_MEDIUM_SORTED: &str = "words_10_000_sorted.txt";
-const FILENAME_MEDIUM_UNSORTED: &str = "words_10_000_unsorted.txt";
-const FILENAME_LARGE_SORTED: &str = "words_584_983_sorted.txt";
-const FILENAME_LARGE_UNSORTED: &str = "words_584_983_unsorted.txt";
-const FILENAME_GOOD_WORDS: &str = "test_good_words.txt";
-const FILENAME_NON_WORDS: &str = "test_non_words.txt";
 const USE_CHAR_GET_COUNTER: bool = false;
 
 const DEBUG_TRIE_MAX_DEPTH: usize = 1000;
 const DEBUG_TRIE_MAX_CHILDREN: usize = 1000;
 
+const WORD_COUNT_SMALL: usize = 10;
+const WORD_COUNT_MEDIUM: usize = 20_000;
+const WORD_COUNT_LARGE: usize = 400_000;
+const WORD_COUNT_GOOD: usize = 1_000;
+const WORD_COUNT_NON: usize = 1_000;
+
+const FILENAME_SMALL_SORTED: &str = "english_words_10_sorted.txt";
+const FILENAME_SMALL_UNSORTED: &str = "english_words_10_unsorted.txt";
+const FILENAME_MEDIUM_SORTED: &str = "fake_words_20_000_sorted.txt";
+const FILENAME_MEDIUM_UNSORTED: &str = "fake_words_20_000_unsorted.txt";
+const FILENAME_LARGE_SORTED: &str = "fake_words_400_000_sorted.txt";
+const FILENAME_LARGE_UNSORTED: &str = "fake_words_400_000_unsorted.txt";
+const FILENAME_GOOD_WORDS: &str = "test_good_words.txt";
+const FILENAME_NON_WORDS: &str = "test_non_words.txt";
+
 const LABEL_STEP_OVERALL: &str = "overall load";
 const LABEL_STEP_READ_FILE: &str = "read file";
 const LABEL_STEP_MAKE_VECTOR: &str = "make_vector";
 const LABEL_STEP_SORT_VECTOR: &str = "sort_vector";
-const LABEL_STEP_READ_AND_VECTOR: &str = "make vector from file";
 const LABEL_STEP_LOAD_FROM_VEC: &str = "load from vector";
+const LABEL_STEP_READ_AND_VECTOR: &str = "make vector from file";
 
 /// A letter trie (https://www.geeksforgeeks.org/trie-insert-and-search) with implementations that use different
 /// approaches for parent and child links but otherwise work the same.
@@ -101,6 +112,7 @@ pub trait LetterTrie {
         is_sorted: bool,
         load_method: &LoadMethod,
         opt: &DisplayDetailOptions,
+        expected_word_count: Option<usize>,
     ) -> Self;
 
     /// Given a word or a partial word, find the corresponding node in the trie if it exists.
@@ -167,7 +179,8 @@ impl Dataset {
         }
     }
 
-    /// Returns true if the dataset is already in alphabetical order.
+    /// Returns true if the dataset is supposed to be already in alphabetical order at least by the first character
+    /// of each word.
     ///
     /// # Examples
     ///
@@ -185,6 +198,16 @@ impl Dataset {
             Dataset::TestSmallUnsorted
             | Dataset::TestMediumUnsorted
             | Dataset::TestLargeUnsorted => false,
+        }
+    }
+
+    /// Get the number of words in a dataset. This is used in assertions to confirm that the various methods of
+    /// loading the words from the file really did get all of the words and properly ignored blank lines.
+    pub fn word_count(&self) -> usize {
+        match self {
+            Dataset::TestSmallSorted | Dataset::TestSmallUnsorted => WORD_COUNT_SMALL,
+            Dataset::TestMediumSorted | Dataset::TestMediumUnsorted => WORD_COUNT_MEDIUM,
+            Dataset::TestLargeSorted | Dataset::TestLargeUnsorted => WORD_COUNT_LARGE,
         }
     }
 }
@@ -269,7 +292,8 @@ impl DisplayDetailOptions {
     ///     &dataset.filename(),
     ///     dataset.is_sorted(),
     ///     &load_method,
-    ///     &display_opt);
+    ///     &display_opt,
+    ///     Some(dataset.word_count()));
     /// ```
     pub fn make_overall_time(
         dataset: &Dataset,
@@ -305,7 +329,8 @@ impl DisplayDetailOptions {
     ///     &dataset.filename(),
     ///     dataset.is_sorted(),
     ///     &load_method,
-    ///     &display_opt);
+    ///     &display_opt,
+    ///     Some(dataset.word_count()));
     /// ```
     pub fn make_moderate(
         dataset: &Dataset,
@@ -349,7 +374,12 @@ impl DisplayDetailOptions {
         load_method: &LoadMethod,
         letter_trie_type: &LetterTrieType,
     ) -> String {
-        format!("{:?}; {:?}; {:?}", dataset, load_method, letter_trie_type).to_owned()
+        let word_count = format!("({} words)", dataset.word_count());
+        format!(
+            "{:?} {}; {:?}; {:?}",
+            dataset, word_count, load_method, letter_trie_type
+        )
+        .to_owned()
     }
 }
 
@@ -381,10 +411,10 @@ impl DisplayDetailOptions {
 ///         prefix: "".to_owned(),
 ///         depth: 0,
 ///         is_word: false,
-///         child_count: 26,
-///         node_count: 1_143_413,
-///         word_count: 584_978,
-///         height: 16,
+///         child_count: 25,
+///         node_count: 1_083_388,
+///         word_count: 400_000,
+///         height: 17,
 ///     }
 /// );
 /// ```
@@ -412,8 +442,8 @@ impl DisplayDetailOptions {
 /// // Confirm that the tries' root nodes are equivalent.
 /// assert_eq!(trie_1.to_fixed_node(), trie_2.to_fixed_node());
 ///
-/// // Confirm that certain words are found in both tries and at equivalent nodes in the tries,
-/// // or that they're not found in either trie.
+/// // Confirm that certain words are found in both tries and at equivalent nodes in the
+/// // tries, or that they're not found in either trie.
 /// for word in vec!["creature", "create", "azure", "notfound", "cross", "cre", "an", "and"] {
 ///     let fixed_node_1: Option<FixedNode> = trie_1.find(word);
 ///     let fixed_node_2: Option<FixedNode> = trie_2.find(word);
@@ -514,53 +544,6 @@ impl CharGetCounter {
     }
 }
 
-/// Given a filename, create a Vec<Vec<char>> which is the most convenient starting point for building a trie
-/// from a list of words. This assumes that there is at most one word per line in the file.
-fn make_vec_char(filename: &str, opt: &DisplayDetailOptions) -> Vec<Vec<char>> {
-    let start = Instant::now();
-    let file = File::open(filename).unwrap();
-    let mut v: Vec<Vec<char>> = vec![];
-    for line in BufReader::new(file).lines() {
-        let line = line.unwrap();
-        let line = line.trim();
-        if !line.is_empty() {
-            let vec_char: Vec<char> = line.to_lowercase().chars().collect();
-            v.push(vec_char);
-        }
-    }
-    print_elapsed_from_start(
-        opt.print_step_time,
-        &opt.label,
-        LABEL_STEP_READ_AND_VECTOR,
-        start,
-    );
-
-    if opt.object_detail_level >= 1 {
-        println!("\nWord count = {}", v.len());
-    }
-
-    v
-}
-
-/// Given a filename, create a Vec<String> where each entry is one word.
-/// This assumes that there is at most one word per line in the file.
-///
-/// # Panics
-///
-/// This will fail if the file does not exist or can't be opened for reading.
-pub fn words_from_file(filename: &str) -> Vec<String> {
-    let file = File::open(filename).unwrap();
-    let mut v: Vec<String> = vec![];
-    for line in BufReader::new(file).lines() {
-        let line = line.unwrap();
-        let line = line.trim();
-        if !line.is_empty() {
-            v.push(line.to_string());
-        }
-    }
-    v
-}
-
 /// For testing, create a vector of 1,000 words that are known to be in the large word list.
 ///
 /// The large word list is the one corresponding to Dataset::TestLargeSorted or Dataset::TestLargeUnsorted.
@@ -573,7 +556,7 @@ pub fn words_from_file(filename: &str) -> Vec<String> {
 ///
 /// Panics if the file does not exist or can't be opened for reading.
 pub fn good_words() -> Vec<String> {
-    words_from_file(FILENAME_GOOD_WORDS)
+    words_from_file_test(FILENAME_GOOD_WORDS, Some(WORD_COUNT_GOOD))
 }
 
 /// For testing, create a vector of 1,000 words that are known NOT to be in the large word list.
@@ -588,7 +571,7 @@ pub fn good_words() -> Vec<String> {
 ///
 /// Panics if the file does not exist or can't be opened for reading.
 pub fn non_words() -> Vec<String> {
-    words_from_file(FILENAME_NON_WORDS)
+    words_from_file_test(FILENAME_NON_WORDS, Some(WORD_COUNT_NON))
 }
 
 /// For testing, create a HashSet containing all of the words in the large dataset.
@@ -611,8 +594,115 @@ pub fn non_words() -> Vec<String> {
 /// Panics if the file for the Dataset::TestLargeSorted dataset does not exist or can't be opened for reading.
 pub fn large_dataset_words_hash_set() -> HashSet<String> {
     let mut hash_set = HashSet::new();
-    for word in words_from_file(Dataset::TestLargeSorted.filename()) {
+    for word in words_from_file_test(Dataset::TestLargeSorted.filename(), Some(WORD_COUNT_LARGE)) {
         hash_set.insert(word);
     }
+    // We've confirmed that the number of words in the source file was equal to WORD_COUNT_LARGE. However, if there
+    // were any duplicate words in that file they won't be included in the hash set so hash_set.len() may be
+    // slightly lower than WORD_COUNT_LARGE.
     hash_set
+}
+
+/// Given a filename, create a Vec<Vec<char>> which is the most convenient starting point for building a trie
+/// from a list of words. This assumes that there is at most one word per line in the file.
+pub fn make_vec_char_test(
+    filename: &str,
+    opt: &DisplayDetailOptions,
+    expected_word_count: Option<usize>,
+) -> Vec<Vec<char>> {
+    let start = Instant::now();
+    let file = File::open(filename).unwrap();
+    let mut v: Vec<Vec<char>> = vec![];
+    for line in BufReader::new(file).lines() {
+        let line = line.unwrap();
+        let line = line.trim();
+        if !line.is_empty() {
+            let vec_char: Vec<char> = line.to_lowercase().chars().collect();
+            v.push(vec_char);
+        }
+    }
+    print_elapsed_from_start(
+        opt.print_step_time,
+        &opt.label,
+        LABEL_STEP_READ_AND_VECTOR,
+        start,
+    );
+
+    if opt.object_detail_level >= 1 {
+        println!("\nWord count = {}", v.len());
+    }
+
+    if let Some(exp_word_count) = expected_word_count {
+        assert_eq!(v.len(), exp_word_count);
+    }
+
+    v
+}
+
+/// Confirm that a trie created from the small dataset has the right summary data no matter how the trie was built.
+///
+/// The small datasets are Dataset::TestSmallSorted and Dataset::TestSmallUnsorted.
+///
+/// # Examples
+///
+/// ```rust
+/// use letter_trie::*;
+///
+/// let dataset = Dataset::TestSmallUnsorted;
+/// let t = NoParentLetterTrie::from_file(
+///     &dataset.filename(),
+///     dataset.is_sorted(),
+///     &LoadMethod::Continuous,
+/// );
+///
+/// assert_small_root(&t.to_fixed_node());
+/// ```
+pub fn assert_small_root(node: &FixedNode) {
+    assert_eq!(
+        *node,
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 2,
+            node_count: 28,
+            word_count: 10,
+            height: 9,
+        }
+    );
+}
+
+/// Confirm that a trie created from the large dataset has the right summary data no matter how the trie was built.
+///
+/// The large datasets are Dataset::TestLargeSorted and Dataset::TestLargeUnsorted.
+///
+/// # Examples
+///
+/// ```rust
+/// use letter_trie::*;
+///
+/// let dataset = Dataset::TestLargeSorted;
+/// let t = BaseLetterTrie::from_file(
+///     &dataset.filename(),
+///     dataset.is_sorted(),
+///     &LoadMethod::ContinuousParallel,
+/// );
+///
+/// assert_large_root(&t.to_fixed_node());
+/// ```
+pub fn assert_large_root(node: &FixedNode) {
+    assert_eq!(
+        *node,
+        FixedNode {
+            c: ' ',
+            prefix: "".to_owned(),
+            depth: 0,
+            is_word: false,
+            child_count: 25,
+            node_count: 1_083_388,
+            word_count: 400_000,
+            height: 17,
+        }
+    );
 }

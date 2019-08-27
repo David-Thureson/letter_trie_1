@@ -147,7 +147,7 @@ impl NoParentLetterTrie {
 
     fn load_vec_fill(&mut self, filename: &str, opt: &DisplayDetailOptions) {
         let start = Instant::now();
-        let v = make_vec_char(filename, opt);
+        let v = make_vec_char_test(filename, opt, None);
         for vec_char in v {
             let v_len = vec_char.len();
             self.add_from_vec_chars(&vec_char, v_len, 0);
@@ -355,7 +355,7 @@ impl NoParentLetterTrie {
 impl LetterTrie for NoParentLetterTrie {
     fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self {
         let opt = DisplayDetailOptions::make_no_display();
-        Self::from_file_test(filename, is_sorted, load_method, &opt)
+        Self::from_file_test(filename, is_sorted, load_method, &opt, None)
     }
 
     fn from_file_test(
@@ -363,6 +363,7 @@ impl LetterTrie for NoParentLetterTrie {
         _is_sorted: bool,
         load_method: &LoadMethod,
         opt: &DisplayDetailOptions,
+        _expected_word_count: Option<usize>,
     ) -> Self {
         let mut t = Self::new();
         print_elapsed(
@@ -440,38 +441,6 @@ impl Iterator for NoParentLetterTrieIteratorBreadthFirst {
 }
 */
 
-pub fn assert_small_root(t: &NoParentLetterTrie) {
-    assert_eq!(
-        t.to_fixed_node(),
-        FixedNode {
-            c: ' ',
-            prefix: "".to_owned(),
-            depth: 0,
-            is_word: false,
-            child_count: 2,
-            node_count: 26,
-            word_count: 9,
-            height: 9,
-        }
-    );
-}
-
-pub fn assert_large_root(t: &NoParentLetterTrie) {
-    assert_eq!(
-        t.to_fixed_node(),
-        FixedNode {
-            c: ' ',
-            prefix: "".to_owned(),
-            depth: 0,
-            is_word: false,
-            child_count: 26,
-            node_count: 1_143_413,
-            word_count: 584_978,
-            height: 16,
-        }
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -485,7 +454,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::Continuous,
         );
-        assert_small_root(&t);
+        assert_small_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -496,7 +465,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::ReadVecFill,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -507,7 +476,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::VecFill,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -518,7 +487,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::Continuous,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -529,7 +498,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::ContinuousParallel,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]

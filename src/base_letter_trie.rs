@@ -210,14 +210,26 @@ impl BaseLetterTrie {
         }
     }
 
-    fn load_read_vec_fill(&self, filename: &str, opt: &DisplayDetailOptions) {
+    fn load_read_vec_fill(
+        &self,
+        filename: &str,
+        opt: &DisplayDetailOptions,
+        expected_word_count: Option<usize>,
+    ) {
         println!("{}", filename);
         let start = Instant::now();
         let content = fs::read_to_string(filename).expect("Error reading file.");
         print_elapsed_from_start(opt.print_step_time, &opt.label, LABEL_STEP_READ_FILE, start);
 
         let start = Instant::now();
-        let words: Vec<&str> = content.split('\n').collect();
+        let words: Vec<&str> = content
+            .split('\n')
+            .map(|x| x.trim())
+            .filter(|x| !x.is_empty())
+            .collect();
+        if let Some(exp_word_count) = expected_word_count {
+            assert_eq!(words.len(), exp_word_count);
+        }
         print_elapsed_from_start(
             opt.print_step_time,
             &opt.label,
@@ -243,9 +255,14 @@ impl BaseLetterTrie {
         self.print(opt.object_detail_level);
     }
 
-    fn load_vec_fill(&self, filename: &str, opt: &DisplayDetailOptions) {
+    fn load_vec_fill(
+        &self,
+        filename: &str,
+        opt: &DisplayDetailOptions,
+        expected_word_count: Option<usize>,
+    ) {
         let start = Instant::now();
-        let v = make_vec_char(filename, opt);
+        let v = make_vec_char_test(filename, opt, expected_word_count);
         for vec_char in v {
             let v_len = vec_char.len();
             self.add_from_vec_chars(&vec_char, v_len, 0);
@@ -259,41 +276,50 @@ impl BaseLetterTrie {
         self.print(opt.object_detail_level);
     }
 
-    fn load_continuous(&self, filename: &str) {
+    fn load_continuous(&self, filename: &str, expected_word_count: Option<usize>) {
         let file = File::open(filename).unwrap();
-        for line in BufReader::new(file).lines() {
-            let line = line.unwrap();
-            let line = line.trim();
-            if !line.is_empty() {
-                let vec_char: Vec<char> = line.to_lowercase().chars().collect();
-                let v_len = vec_char.len();
-                self.add_from_vec_chars(&vec_char, v_len, 0);
-            }
+        let lines = BufReader::new(file)
+            .lines()
+            .map(|x| x.unwrap().trim().to_owned())
+            .filter(|x| !x.is_empty())
+            .collect::<Vec<String>>();
+        if let Some(exp_word_count) = expected_word_count {
+            assert_eq!(lines.len(), exp_word_count);
+        }
+
+        for line in lines {
+            let vec_char: Vec<char> = line.to_lowercase().chars().collect();
+            let v_len = vec_char.len();
+            self.add_from_vec_chars(&vec_char, v_len, 0);
         }
     }
 
-    fn load_continuous_parallel_sorted(&self, filename: &str) {
+    fn load_continuous_parallel_sorted(&self, filename: &str, expected_word_count: Option<usize>) {
         let (tx, rx) = mpsc::channel();
 
         let file = File::open(filename).unwrap();
+        let lines = BufReader::new(file)
+            .lines()
+            .map(|x| x.unwrap().trim().to_owned())
+            .filter(|x| !x.is_empty())
+            .collect::<Vec<String>>();
+        if let Some(exp_word_count) = expected_word_count {
+            assert_eq!(lines.len(), exp_word_count);
+        }
 
         let mut thread_count = 0;
         let mut prev_c = ' ';
         let mut this_vec: Vec<Vec<char>> = vec![];
-        for line in BufReader::new(file).lines() {
-            let line = line.unwrap();
-            let line = line.trim();
-            if !line.is_empty() {
-                let vec_char: Vec<char> = line.to_lowercase().chars().collect();
-                let this_c = vec_char[0];
-                if this_c != prev_c {
-                    thread_count +=
-                        Self::create_thread_for_part_of_vec(this_vec, mpsc::Sender::clone(&tx));
-                    this_vec = vec![];
-                    prev_c = this_c;
-                }
-                this_vec.push(vec_char.clone());
+        for line in lines {
+            let vec_char: Vec<char> = line.to_lowercase().chars().collect();
+            let this_c = vec_char[0];
+            if this_c != prev_c {
+                thread_count +=
+                    Self::create_thread_for_part_of_vec(this_vec, mpsc::Sender::clone(&tx));
+                this_vec = vec![];
+                prev_c = this_c;
             }
+            this_vec.push(vec_char.clone());
         }
 
         thread_count += Self::create_thread_for_part_of_vec(this_vec, mpsc::Sender::clone(&tx));
@@ -306,8 +332,13 @@ impl BaseLetterTrie {
         }
     }
 
-    fn load_parallel_unsorted(&self, filename: &str, opt: &DisplayDetailOptions) {
-        let mut v = make_vec_char(filename, opt);
+    fn load_parallel_unsorted(
+        &self,
+        filename: &str,
+        opt: &DisplayDetailOptions,
+        expected_word_count: Option<usize>,
+    ) {
+        let mut v = make_vec_char_test(filename, opt, expected_word_count);
 
         print_elapsed(
             opt.print_step_time,
@@ -476,7 +507,7 @@ impl BaseLetterTrie {
 impl LetterTrie for BaseLetterTrie {
     fn from_file(filename: &str, is_sorted: bool, load_method: &LoadMethod) -> Self {
         let opt = DisplayDetailOptions::make_no_display();
-        Self::from_file_test(filename, is_sorted, load_method, &opt)
+        Self::from_file_test(filename, is_sorted, load_method, &opt, None)
     }
 
     fn from_file_test(
@@ -484,6 +515,7 @@ impl LetterTrie for BaseLetterTrie {
         is_sorted: bool,
         load_method: &LoadMethod,
         opt: &DisplayDetailOptions,
+        expected_word_count: Option<usize>,
     ) -> Self {
         let t = Self::new();
         print_elapsed(
@@ -493,19 +525,19 @@ impl LetterTrie for BaseLetterTrie {
             || {
                 match load_method {
                     LoadMethod::ReadVecFill => {
-                        t.load_read_vec_fill(filename, opt);
+                        t.load_read_vec_fill(filename, opt, expected_word_count);
                     }
                     LoadMethod::VecFill => {
-                        t.load_vec_fill(filename, opt);
+                        t.load_vec_fill(filename, opt, expected_word_count);
                     }
                     LoadMethod::Continuous => {
-                        t.load_continuous(filename);
+                        t.load_continuous(filename, expected_word_count);
                     }
                     LoadMethod::ContinuousParallel => {
                         if is_sorted {
-                            t.load_continuous_parallel_sorted(filename);
+                            t.load_continuous_parallel_sorted(filename, expected_word_count);
                         } else {
-                            t.load_parallel_unsorted(filename, opt);
+                            t.load_parallel_unsorted(filename, opt, expected_word_count);
                         }
                     }
                 };
@@ -843,38 +875,6 @@ impl Debug for Node {
     }
 }
 
-pub fn assert_small_root(t: &BaseLetterTrie) {
-    assert_eq!(
-        t.to_fixed_node(),
-        FixedNode {
-            c: ' ',
-            prefix: "".to_owned(),
-            depth: 0,
-            is_word: false,
-            child_count: 2,
-            node_count: 26,
-            word_count: 9,
-            height: 9,
-        }
-    );
-}
-
-pub fn assert_large_root(t: &BaseLetterTrie) {
-    assert_eq!(
-        t.to_fixed_node(),
-        FixedNode {
-            c: ' ',
-            prefix: "".to_owned(),
-            depth: 0,
-            is_word: false,
-            child_count: 26,
-            node_count: 1_143_413,
-            word_count: 584_978,
-            height: 16,
-        }
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -888,7 +888,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::Continuous,
         );
-        assert_small_root(&t);
+        assert_small_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -906,10 +906,10 @@ mod tests {
                 prefix: "cross".to_owned(),
                 depth: 5,
                 is_word: true,
-                child_count: 0,
-                node_count: 1,
-                word_count: 1,
-                height: 1,
+                child_count: 1,
+                node_count: 3,
+                word_count: 2,
+                height: 3,
             })
         );
     }
@@ -976,8 +976,8 @@ mod tests {
                 depth: 1,
                 is_word: false,
                 child_count: 1,
-                node_count: 18,
-                word_count: 5,
+                node_count: 20,
+                word_count: 6,
                 height: 8,
             })
         );
@@ -1002,7 +1002,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::ReadVecFill,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -1013,7 +1013,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::VecFill,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -1024,7 +1024,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::Continuous,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
@@ -1035,7 +1035,7 @@ mod tests {
             dataset.is_sorted(),
             &LoadMethod::ContinuousParallel,
         );
-        assert_large_root(&t)
+        assert_large_root(&t.to_fixed_node());
     }
 
     #[test]
