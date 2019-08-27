@@ -1,6 +1,3 @@
 /target
 **/*.rs.bk
 Cargo.lock
-words_10_000*.txt
-words_584*.txt
-test_*.txt
